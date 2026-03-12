@@ -10,13 +10,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useViewMode } from '@/contexts/ViewModeContext';
 import { useBills } from '@/hooks/useBills';
@@ -310,29 +303,27 @@ export default function BillsPage() {
             </div>
             <div>
               <label className="text-sm text-foreground">Dia do vencimento</label>
-              <Select value={String(form.due_day)} onValueChange={(v) => setForm((f) => ({ ...f, due_day: Number(v) }))}>
-                <SelectTrigger className="mt-1 bg-muted border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                    <SelectItem key={d} value={String(d)}>{d}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={form.due_day}
+                onChange={(e) => setForm((f) => ({ ...f, due_day: Number(e.target.value) }))}
+                className="mt-1 w-full h-10 rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground"
+              >
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-sm text-foreground">Categoria</label>
-              <Select value={form.category || categories[0]} onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}>
-                <SelectTrigger className="mt-1 bg-muted border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={form.category || categories[0]}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                className="mt-1 w-full h-10 rounded-md border border-input bg-muted px-3 py-2 text-sm text-foreground"
+              >
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </div>
           </div>
           <DialogFooter>

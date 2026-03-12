@@ -84,10 +84,10 @@ export function useAlerts() {
   };
 }
 
-/** Verifica e envia alertas. Chamar no login. */
-export async function checkAndSendAlerts(userId: string): Promise<void> {
-  const { data: profile } = await supabase.from('profiles').select('email, preferences, email_alerts_enabled').eq('id', userId).single();
-  if (!profile?.email || profile.email_alerts_enabled === false) return;
+/** Verifica e envia alertas. Chamar no login. Email vem de auth.users via parâmetro. */
+export async function checkAndSendAlerts(userId: string, userEmail: string): Promise<void> {
+  const { data: profile } = await supabase.from('profiles').select('preferences, email_alerts_enabled').eq('id', userId).single();
+  if (!userEmail || !profile || profile.email_alerts_enabled === false) return;
 
   const prefs = (profile.preferences as Record<string, boolean>) || {};
   const budgetAlert = prefs.budget_alert !== false;
@@ -137,7 +137,7 @@ export async function checkAndSendAlerts(userId: string): Promise<void> {
       if (limit <= 0) continue;
       const pct = Math.round((spent / limit) * 100);
       if (pct >= 80) {
-        await sendBudgetAlert(profile.email, { category: b.category, percentUsed: pct, limit, spent });
+        await sendBudgetAlert(userEmail, { category: b.category, percentUsed: pct, limit, spent });
         break;
       }
     }
@@ -147,7 +147,7 @@ export async function checkAndSendAlerts(userId: string): Promise<void> {
   if (goalAchieved && goals?.length) {
     const achieved = goals.find((g) => Number(g.current_amount) >= Number(g.target_amount) && Number(g.target_amount) > 0);
     if (achieved) {
-      await sendGoalAchieved(profile.email, {
+      await sendGoalAchieved(userEmail, {
         goalName: achieved.name,
         amount: Number(achieved.current_amount),
         nextSteps: 'Defina sua próxima meta no app!',
@@ -163,7 +163,7 @@ export async function checkAndSendAlerts(userId: string): Promise<void> {
       byCat[t.category] = (byCat[t.category] || 0) + Number(t.amount);
     });
     const top = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0];
-    await sendWeeklyReport(profile.email, {
+    await sendWeeklyReport(userEmail, {
       income,
       expense,
       topCategory: top?.[0] || '—',
@@ -172,7 +172,7 @@ export async function checkAndSendAlerts(userId: string): Promise<void> {
   }
 
   if (monthlyPlan) {
-    await sendMonthlyPlan(profile.email, {
+    await sendMonthlyPlan(userEmail, {
       plan: 'Acompanhe suas metas e gastos no app.',
       summary: 'Seu resumo do mês.',
     });
@@ -182,6 +182,6 @@ export async function checkAndSendAlerts(userId: string): Promise<void> {
     user_id: userId,
     type: 'alerts_check',
     subject: 'Alertas enviados',
-    meta: { date: today },
+    meta: { date: today }
   });
 }

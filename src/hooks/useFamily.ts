@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getErrorMessage, getFriendlyError } from '@/lib/supabase-error';
 import type { Family, FamilyMember } from '@/types/database';
 
 const INVITE_CODE_LENGTH = 8;
@@ -70,7 +71,8 @@ export function useFamily(userId: string | undefined): UseFamilyReturn {
         .eq('family_id', familyId);
       setMembers((allMembers || []) as FamilyMember[]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar família.');
+      const msg = getErrorMessage(err, 'Erro ao carregar família.');
+      setError(getFriendlyError(msg, 'Erro ao conectar. Verifique as tabelas no banco.'));
       setCurrentFamily(null);
       setMembers([]);
     } finally {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getErrorMessage, getFriendlyError } from '@/lib/supabase-error';
 import type { Bill } from '@/types/database';
 
 export interface BillApp {
@@ -48,7 +49,8 @@ export function useBills(userId: string | undefined, familyId: string | null | u
       if (e) throw e;
       setBills((data || []).map(toApp));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar contas');
+      const msg = getErrorMessage(err, 'Erro ao carregar contas');
+      setError(getFriendlyError(msg, 'Erro ao conectar. Verifique se a tabela bills existe no banco.'));
       setBills([]);
     } finally {
       setLoading(false);

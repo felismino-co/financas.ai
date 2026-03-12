@@ -6,6 +6,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: "/",
   server: {
     host: "::",
     port: 8080,
@@ -18,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg", "icons/icon-192x192.png", "icons/icon-512x512.png"],
+      includeAssets: ["favicon.svg", "icons/icon-192x192.svg", "icons/icon-512x512.svg"],
       manifest: {
         name: "FinanceIA",
         short_name: "FinanceIA",
@@ -30,14 +31,14 @@ export default defineConfig(({ mode }) => ({
         start_url: "/dashboard",
         icons: [
           {
-            src: "/icons/icon-192x192.png",
+            src: "/icons/icon-192x192.svg",
             sizes: "192x192",
-            type: "image/png",
+            type: "image/svg+xml",
           },
           {
-            src: "/icons/icon-512x512.png",
+            src: "/icons/icon-512x512.svg",
             sizes: "512x512",
-            type: "image/png",
+            type: "image/svg+xml",
           },
         ],
       },

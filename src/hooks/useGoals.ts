@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getErrorMessage, getFriendlyError } from '@/lib/supabase-error';
 import type { Goal as DbGoal } from '@/types/database';
 
 export interface GoalApp {
@@ -64,7 +65,8 @@ export function useGoals(
       if (e) throw e;
       setGoals((data || []).map(toApp));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar metas.');
+      const msg = getErrorMessage(err, 'Erro ao carregar metas.');
+      setError(getFriendlyError(msg, 'Erro ao conectar. Verifique as tabelas no banco.'));
       setGoals([]);
     } finally {
       setLoading(false);

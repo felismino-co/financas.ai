@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getErrorMessage, getFriendlyError } from '@/lib/supabase-error';
 import type { Transaction as DbTransaction } from '@/types/database';
 
 /** Formato usado pela UI (camelCase, note) */
@@ -102,7 +103,8 @@ export function useTransactions(
       if (e) throw e;
       setTransactions((data || []).map(toApp));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar transações.');
+      const msg = getErrorMessage(err, 'Erro ao carregar transações.');
+      setError(getFriendlyError(msg, 'Erro ao conectar. Verifique as tabelas no banco.'));
       setTransactions([]);
     } finally {
       setLoading(false);

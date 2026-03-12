@@ -14,8 +14,8 @@ function AppLayoutContent() {
   usePlanSync();
   const { user } = useAuth();
   useEffect(() => {
-    if (user?.id) checkAndSendAlerts(user.id);
-  }, [user?.id]);
+    if (user?.id && user?.email) checkAndSendAlerts(user.id, user.email);
+  }, [user?.id, user?.email]);
   const { userId, viewMode, setViewMode } = useViewMode();
   return (
     <div className="flex min-h-screen bg-background">
