@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { BottomNav } from '@/components/BottomNav';
 import { DesktopSidebar } from '@/components/DesktopSidebar';
@@ -6,9 +7,15 @@ import { FamilyMode } from '@/components/FamilyMode';
 import { InstallPWA } from '@/components/InstallPWA';
 import { AIChat } from '@/components/AIChat';
 import { usePlanSync } from '@/hooks/usePlanSync';
+import { checkAndSendAlerts } from '@/hooks/useAlerts';
+import { useAuth } from '@/hooks/useAuth';
 
 function AppLayoutContent() {
   usePlanSync();
+  const { user } = useAuth();
+  useEffect(() => {
+    if (user?.id) checkAndSendAlerts(user.id);
+  }, [user?.id]);
   const { userId, viewMode, setViewMode } = useViewMode();
   return (
     <div className="flex min-h-screen bg-background">

@@ -24,10 +24,7 @@ export default function ProfilePage() {
   const { isPro } = usePlan();
   const { preferences: alertPrefs, updatePreferences: updateAlertPrefs } = useAlerts();
   const navigate = useNavigate();
-  const [preferences, setPreferences] = useState({
-    budgetAlerts: true,
-    closingDay: 1,
-  });
+  const [preferences, setPreferences] = useState({ closingDay: 1 });
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAvatar, setEditAvatar] = useState('');
@@ -171,21 +168,21 @@ export default function ProfilePage() {
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
         className="bg-card border border-border rounded-xl p-4 shadow-card space-y-4">
-        <h3 className="font-semibold text-foreground text-sm">Preferências</h3>
+        <h3 className="font-semibold text-foreground text-sm">Notificações por e-mail</h3>
         {[
-          { label: 'Notificações por e-mail', key: 'email_alerts_enabled' as const },
-          { label: 'Resumo semanal por e-mail', key: 'email_weekly_digest' as const },
+          { label: 'Notificações ativadas', key: 'email_alerts_enabled' as const },
+          { label: 'Resumo semanal', key: 'email_weekly_digest' as const },
           { label: 'Lembrete de contas a pagar', key: 'email_bills_reminder' as const },
-          { label: 'Alertas de orçamento', key: 'budgetAlerts' as const },
+          { label: 'Alertas de orçamento', key: 'budget_alert' as const },
+          { label: 'Resumo semanal (relatório)', key: 'weekly_report' as const },
+          { label: 'Metas atingidas', key: 'goal_achieved' as const },
+          { label: 'Plano mensal', key: 'monthly_plan' as const },
         ].map(p => (
           <div key={p.key} className="flex items-center justify-between">
             <span className="text-sm text-foreground">{p.label}</span>
             <Switch
-              checked={p.key === 'budgetAlerts' ? preferences.budgetAlerts : (alertPrefs[p.key as keyof typeof alertPrefs] ?? false)}
-              onCheckedChange={v => {
-                if (p.key === 'budgetAlerts') setPreferences(prev => ({ ...prev, budgetAlerts: v }));
-                else updateAlertPrefs({ [p.key]: v });
-              }}
+              checked={alertPrefs[p.key as keyof typeof alertPrefs] ?? false}
+              onCheckedChange={v => updateAlertPrefs({ [p.key]: v })}
             />
           </div>
         ))}

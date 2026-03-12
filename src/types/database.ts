@@ -43,6 +43,12 @@ export interface Profile {
   email_bills_reminder?: boolean;
   phone_number?: string | null;
   whatsapp_connected?: boolean;
+  preferences?: {
+    budget_alert?: boolean;
+    weekly_report?: boolean;
+    goal_achieved?: boolean;
+    monthly_plan?: boolean;
+  };
 }
 
 export interface Bill {

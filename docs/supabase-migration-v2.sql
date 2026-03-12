@@ -10,7 +10,8 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS email_weekly_digest BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS email_bills_reminder BOOLEAN NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS phone_number TEXT,
-  ADD COLUMN IF NOT EXISTS whatsapp_connected BOOLEAN NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS whatsapp_connected BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{"budget_alert":true,"weekly_report":true,"goal_achieved":true,"monthly_plan":true}'::jsonb;
 
 -- ----- EMAIL_LOGS -----
 CREATE TABLE IF NOT EXISTS public.email_logs (

@@ -1,6 +1,6 @@
 /**
  * Cliente Z-API para envio de mensagens WhatsApp.
- * Usado apenas no backend (Edge Function). No frontend, use o webhook para receber.
+ * No frontend: configuração. No backend (Edge Function): envio real.
  */
 const ZAPI_BASE = 'https://api.z-api.io';
 
@@ -9,6 +9,9 @@ export interface ZApiSendParams {
   message: string;
 }
 
+/**
+ * Envia mensagem via Z-API. Usar no backend (Edge Function) com instanceId e token do env.
+ */
 export async function sendWhatsAppMessage(
   instanceId: string,
   token: string,
@@ -17,12 +20,13 @@ export async function sendWhatsAppMessage(
   try {
     const phone = params.phone.replace(/\D/g, '');
     if (phone.length < 10) return { ok: false, error: 'Número inválido' };
+    const formatted = phone.startsWith('55') ? phone : `55${phone}`;
 
     const res = await fetch(`${ZAPI_BASE}/instances/${instanceId}/token/${token}/send-text`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        phone: `55${phone}`,
+        phone: formatted,
         message: params.message,
       }),
     });
