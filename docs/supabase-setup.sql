@@ -18,6 +18,7 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
 DROP TABLE IF EXISTS public.insights CASCADE;
 DROP TABLE IF EXISTS public.budgets CASCADE;
+DROP TABLE IF EXISTS public.bills CASCADE;
 DROP TABLE IF EXISTS public.goals CASCADE;
 DROP TABLE IF EXISTS public.transactions CASCADE;
 DROP TABLE IF EXISTS public.family_members CASCADE;
@@ -113,6 +114,23 @@ CREATE TABLE public.insights (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   read BOOLEAN NOT NULL DEFAULT false
 );
+
+CREATE TABLE public.bills (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  family_id UUID REFERENCES public.families(id) ON DELETE SET NULL,
+  description TEXT NOT NULL,
+  amount NUMERIC(12,2) NOT NULL,
+  due_day INTEGER NOT NULL CHECK (due_day >= 1 AND due_day <= 31),
+  type TEXT NOT NULL DEFAULT 'expense' CHECK (type IN ('income','expense')),
+  category TEXT,
+  is_recurring BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bills_user_id ON public.bills(user_id);
+CREATE INDEX IF NOT EXISTS idx_bills_family_id ON public.bills(family_id);
+CREATE INDEX IF NOT EXISTS idx_bills_due_day ON public.bills(due_day);
 
 -- ============================================
 -- PARTE 3: RLS e policies (todas as tabelas já existem)
@@ -247,6 +265,27 @@ CREATE POLICY "insights_update_own"
 CREATE POLICY "insights_delete_own"
   ON public.insights FOR DELETE USING (auth.uid() = user_id);
 
+ALTER TABLE public.bills ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "bills_select_own_or_family"
+  ON public.bills FOR SELECT
+  USING (
+    auth.uid() = user_id
+    OR (
+      family_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM public.family_members fm
+        WHERE fm.family_id = bills.family_id AND fm.user_id = auth.uid()
+      )
+    )
+  );
+CREATE POLICY "bills_insert_own"
+  ON public.bills FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "bills_update_own"
+  ON public.bills FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "bills_delete_own"
+  ON public.bills FOR DELETE USING (auth.uid() = user_id);
+
 -- ============================================
 -- PARTE 4: Trigger em auth.users → cria profile
 -- Referencia auth.users (NEW) e insere em public.profiles
@@ -289,5 +328,6 @@ CREATE INDEX IF NOT EXISTS idx_budgets_user_month_year ON public.budgets(user_id
 CREATE INDEX IF NOT EXISTS idx_family_members_family_id ON public.family_members(family_id);
 CREATE INDEX IF NOT EXISTS idx_family_members_user_id ON public.family_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_insights_user_read ON public.insights(user_id, read);
+CREATE INDEX IF NOT EXISTS idx_bills_user_due ON public.bills(user_id, due_day);
 
 -- Fim do setup

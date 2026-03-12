@@ -103,8 +103,8 @@ export function useBills(userId: string | undefined, familyId: string | null | u
     return bills.filter((b) => {
       if (type && b.type !== type) return false;
       const d = b.due_day;
-      if (d >= today && d <= maxDay) return true;
-      if (maxDay > 31 && d <= (maxDay % 31)) return true;
+      if (d >= today && d <= Math.min(maxDay, 31)) return true;
+      if (maxDay > 31 && d <= (maxDay - 31)) return true;
       return false;
     });
   }, [bills]);

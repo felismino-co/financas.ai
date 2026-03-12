@@ -20,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useViewMode } from '@/contexts/ViewModeContext';
 import { useBills } from '@/hooks/useBills';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useAlerts } from '@/hooks/useAlerts';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -29,11 +30,12 @@ import { RECEIVING_CATEGORIES, PAYING_CATEGORIES } from '@/data/bills-categories
 export default function BillsPage() {
   const { user } = useAuth();
   const { userId, familyId } = useViewMode();
-  const { bills, loading, addBill, updateBill, deleteBill, upcomingDue } = useBills(userId, familyId);
+  const { bills, loading, error, addBill, updateBill, deleteBill, upcomingDue } = useBills(userId, familyId);
   const { sendBillsReminder } = useAlerts();
   const [activeTab, setActiveTab] = useState<'recebimentos' | 'contas'>('contas');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({
     description: '',
     amountDisplay: '',
@@ -122,10 +124,15 @@ export default function BillsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Excluir?')) return;
+    setDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await deleteBill(id);
+      await deleteBill(deleteId);
       toast.success('Excluído.');
+      setDeleteId(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erro.');
     }
@@ -171,7 +178,7 @@ export default function BillsPage() {
               <button type="button" onClick={() => handleOpenEdit(b)} className="p-1.5 rounded hover:bg-muted text-muted-foreground">
                 <Pencil size={14} />
               </button>
-              <button type="button" onClick={() => handleDelete(b.id)} className="p-1.5 rounded hover:bg-destructive/10 text-destructive">
+              <button type="button" onClick={() => setDeleteId(b.id)} className="p-1.5 rounded hover:bg-destructive/10 text-destructive">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -189,6 +196,12 @@ export default function BillsPage() {
         <h1 className="text-xl font-bold text-foreground">Contas e recebimentos</h1>
         <p className="text-sm text-muted-foreground">Receitas fixas e contas a pagar</p>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       {upcoming.length > 0 && (
         <motion.div
@@ -259,6 +272,15 @@ export default function BillsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(o) => !o && setDeleteId(null)}
+        title="Excluir conta"
+        description="Tem certeza? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        onConfirm={confirmDelete}
+      />
 
       <Dialog open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) resetForm(); }}>
         <DialogContent className="bg-card border-border">

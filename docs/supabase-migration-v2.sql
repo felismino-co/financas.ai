@@ -56,7 +56,23 @@ CREATE INDEX IF NOT EXISTS idx_bills_due_day ON public.bills(due_day);
 
 ALTER TABLE public.bills ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage own bills"
-  ON public.bills FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can manage own bills" ON public.bills;
+
+CREATE POLICY "bills_select_own_or_family"
+  ON public.bills FOR SELECT
+  USING (
+    auth.uid() = user_id
+    OR (
+      family_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM public.family_members fm
+        WHERE fm.family_id = bills.family_id AND fm.user_id = auth.uid()
+      )
+    )
+  );
+CREATE POLICY "bills_insert_own"
+  ON public.bills FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "bills_update_own"
+  ON public.bills FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "bills_delete_own"
+  ON public.bills FOR DELETE USING (auth.uid() = user_id);
