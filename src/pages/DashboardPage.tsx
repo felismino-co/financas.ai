@@ -39,7 +39,7 @@ export default function DashboardPage() {
 
   const mainGoal = goals[0];
   const mainGoalProgress = mainGoal ? Math.round((mainGoal.currentAmount / mainGoal.targetAmount) * 100) : 0;
-  const upcomingBills = useMemo(() => upcomingDue(7), [upcomingDue]);
+  const upcomingBills = useMemo(() => upcomingDue(7, 'expense'), [upcomingDue]);
 
   const fixedExpensesTotal = useMemo(
     () => transactions.filter((t) => t.type === 'expense' && t.recurring).reduce((s, t) => s + t.amount, 0),

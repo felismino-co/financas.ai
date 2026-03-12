@@ -134,7 +134,7 @@ export default function ProfilePage() {
             <li>• Transcrição de áudio ilimitada</li>
             <li>• Suporte prioritário</li>
           </ul>
-          <Button className="w-full mt-3 bg-primary text-primary-foreground text-sm" onClick={() => window.location.href = '#kiwify-mensal'}>
+          <Button className="w-full mt-3 bg-primary text-primary-foreground text-sm" onClick={() => window.open('https://pay.kiwify.com.br/VUJcmP0', '_blank')}>
             Assinar por R$47/mês
           </Button>
         </motion.div>
@@ -147,7 +147,7 @@ export default function ProfilePage() {
           <ul className="space-y-1 text-xs text-muted-foreground mt-2">
             <li>• Todos os benefícios do Pro Mensal</li>
           </ul>
-          <Button className="w-full mt-3 bg-purple-600 text-white text-sm" onClick={() => window.location.href = '#kiwify-semestral'}>
+          <Button className="w-full mt-3 bg-purple-600 text-white text-sm" onClick={() => window.open('https://pay.kiwify.com.br/uzUMxK5', '_blank')}>
             Assinar por R$197
           </Button>
         </motion.div>
@@ -163,7 +163,7 @@ export default function ProfilePage() {
             <li>• Todos os benefícios do Pro Mensal</li>
             <li>• Acesso antecipado a novas funcionalidades</li>
           </ul>
-          <Button className="w-full mt-4 bg-secondary-foreground text-secondary hover:opacity-90 font-semibold text-sm" onClick={() => window.location.href = '#kiwify-anual'}>
+          <Button className="w-full mt-4 bg-secondary-foreground text-secondary hover:opacity-90 font-semibold text-sm" onClick={() => window.open('https://pay.kiwify.com.br/y8zncPg', '_blank')}>
             Assinar por R$297/ano
           </Button>
         </motion.div>

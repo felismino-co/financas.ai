@@ -24,7 +24,7 @@ const PLANS = [
       'Suporte prioritário',
     ],
     cta: 'Assinar por R$47/mês',
-    href: '#kiwify-mensal',
+    href: 'https://pay.kiwify.com.br/VUJcmP0',
     className: 'bg-primary text-primary-foreground',
   },
   {
@@ -37,7 +37,7 @@ const PLANS = [
       'Todos os benefícios do Pro Mensal',
     ],
     cta: 'Assinar por R$197',
-    href: '#kiwify-semestral',
+    href: 'https://pay.kiwify.com.br/uzUMxK5',
     className: 'bg-purple-600 text-white',
   },
   {
@@ -51,7 +51,7 @@ const PLANS = [
       'Acesso antecipado a novas funcionalidades',
     ],
     cta: 'Assinar por R$297/ano',
-    href: '#kiwify-anual',
+    href: 'https://pay.kiwify.com.br/y8zncPg',
     className: 'bg-gradient-to-r from-primary to-purple-600 text-white',
   },
 ];
@@ -104,9 +104,7 @@ export function UpgradeModal({
               </ul>
               <Button
                 className={`mt-3 w-full ${plan.className}`}
-                onClick={() => {
-                  window.location.href = plan.href;
-                }}
+                onClick={() => window.open(plan.href, '_blank')}
               >
                 {plan.cta}
               </Button>

@@ -97,10 +97,11 @@ export function useBills(userId: string | undefined, familyId: string | null | u
     await fetch();
   };
 
-  const upcomingDue = useCallback((daysAhead = 7) => {
+  const upcomingDue = useCallback((daysAhead = 7, type?: 'income' | 'expense') => {
     const today = new Date().getDate();
     const maxDay = today + daysAhead;
     return bills.filter((b) => {
+      if (type && b.type !== type) return false;
       const d = b.due_day;
       if (d >= today && d <= maxDay) return true;
       if (maxDay > 31 && d <= (maxDay % 31)) return true;

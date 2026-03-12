@@ -35,7 +35,7 @@ const PLANS = [
       'Suporte prioritário',
     ],
     cta: 'Assinar por R$47/mês',
-    href: '#kiwify-mensal',
+    href: 'https://pay.kiwify.com.br/VUJcmP0',
     current: false,
     highlight: false,
   },
@@ -46,7 +46,7 @@ const PLANS = [
     badge: 'Economize R$85',
     features: ['Equivale a R$ 32,83/mês', 'Todos os benefícios do Pro Mensal'],
     cta: 'Assinar por R$197',
-    href: '#kiwify-semestral',
+    href: 'https://pay.kiwify.com.br/uzUMxK5',
     current: false,
     highlight: false,
   },
@@ -61,7 +61,7 @@ const PLANS = [
       'Acesso antecipado a novas funcionalidades',
     ],
     cta: 'Assinar por R$297/ano',
-    href: '#kiwify-anual',
+    href: 'https://pay.kiwify.com.br/y8zncPg',
     current: false,
     highlight: true,
   },
@@ -142,7 +142,11 @@ export default function PricingPage() {
                       : 'bg-muted text-foreground'
                 }`}
                 disabled={plan.current}
-                onClick={() => !plan.current && (window.location.href = plan.href)}
+                onClick={() => {
+                  if (plan.current) return;
+                  if (plan.href.startsWith('http')) window.open(plan.href, '_blank');
+                  else window.location.href = plan.href;
+                }}
               >
                 {plan.cta}
               </Button>

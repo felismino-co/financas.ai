@@ -5,8 +5,10 @@ import { ViewModeProvider, useViewMode } from '@/contexts/ViewModeContext';
 import { FamilyMode } from '@/components/FamilyMode';
 import { InstallPWA } from '@/components/InstallPWA';
 import { AIChat } from '@/components/AIChat';
+import { usePlanSync } from '@/hooks/usePlanSync';
 
 function AppLayoutContent() {
+  usePlanSync();
   const { userId, viewMode, setViewMode } = useViewMode();
   return (
     <div className="flex min-h-screen bg-background">
