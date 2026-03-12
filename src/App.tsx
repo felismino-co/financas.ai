@@ -19,6 +19,7 @@ import ProfilePage from "./pages/ProfilePage";
 import PricingPage from "./pages/PricingPage";
 import EducationPage from "./pages/EducationPage";
 import BillsPage from "./pages/BillsPage";
+import BanksPage from "./pages/BanksPage";
 import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
 
@@ -196,6 +197,7 @@ function AppRoutes() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/education" element={<EducationPage />} />
         <Route path="/bills" element={<BillsPage />} />
+        <Route path="/banks" element={<BanksPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

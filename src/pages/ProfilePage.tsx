@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LogOut, Trash2, Download, Lock, Crown, Check, GraduationCap, Pencil } from 'lucide-react';
+import { LogOut, Trash2, Download, Lock, Crown, Check, GraduationCap, Pencil, Building2 } from 'lucide-react';
 import { useState } from 'react';
 import { AICreditsBar } from '@/components/AICreditsBar';
 import { useAppTour } from '@/components/AppTour';
 import { usePlan } from '@/hooks/usePlan';
 import { useAlerts } from '@/hooks/useAlerts';
+import { useBankConnections } from '@/hooks/useBankConnections';
 import { WhatsAppConnect } from '@/components/WhatsAppConnect';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -23,6 +24,7 @@ export default function ProfilePage() {
   const { resetAndStartTour } = useAppTour();
   const { isPro } = usePlan();
   const { preferences: alertPrefs, updatePreferences: updateAlertPrefs } = useAlerts();
+  const { connections, getBankLimit } = useBankConnections(user?.id);
   const navigate = useNavigate();
   const [preferences, setPreferences] = useState({ closingDay: 1 });
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -78,6 +80,17 @@ export default function ProfilePage() {
         <p className="text-sm text-muted-foreground">{user?.email ?? ''}</p>
         <Button variant="outline" size="sm" className="mt-3 border-border text-foreground hover:bg-muted text-xs" onClick={handleOpenEditProfile}>
           <Pencil size={12} className="mr-1" /> Editar perfil
+        </Button>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+        className="bg-card border border-border rounded-xl p-4 shadow-card space-y-3">
+        <h3 className="font-semibold text-foreground text-sm">Contas bancárias conectadas</h3>
+        <p className="text-sm text-muted-foreground">
+          {connections.length} / {getBankLimit()} bancos
+        </p>
+        <Button variant="outline" size="sm" className="w-full border-border text-foreground hover:bg-muted" onClick={() => navigate('/banks')}>
+          <Building2 size={16} className="mr-2" /> Gerenciar
         </Button>
       </motion.div>
 

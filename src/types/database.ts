@@ -77,6 +77,18 @@ export interface Transaction {
   frequency: 'weekly' | 'monthly' | null;
   notes: string | null;
   created_at: string;
+  source?: 'manual' | 'pluggy';
+  pluggy_transaction_id?: string | null;
+}
+
+export interface BankConnection {
+  id: string;
+  user_id: string;
+  pluggy_item_id: string;
+  institution_name: string | null;
+  status?: 'active' | 'error';
+  last_synced_at: string | null;
+  created_at: string;
 }
 
 export interface Goal {
@@ -139,6 +151,7 @@ export type FamilyInsert = Omit<Family, 'id' | 'created_at'> & { id?: string; cr
 export type FamilyMemberInsert = Omit<FamilyMember, 'id' | 'joined_at'> & { id?: string; joined_at?: string };
 export type InsightInsert = Omit<Insight, 'id' | 'created_at'> & { id?: string; created_at?: string };
 export type BillInsert = Omit<Bill, 'id' | 'created_at'> & { id?: string; created_at?: string };
+export type BankConnectionInsert = Omit<BankConnection, 'id' | 'created_at'> & { id?: string; created_at?: string };
 
 // Database type for Supabase client (table names → row types)
 export interface Database {
@@ -152,6 +165,7 @@ export interface Database {
       family_members: { Row: FamilyMember; Insert: FamilyMemberInsert; Update: Partial<FamilyMemberInsert> };
       insights: { Row: Insight; Insert: InsightInsert; Update: Partial<InsightInsert> };
       bills: { Row: Bill; Insert: BillInsert; Update: Partial<BillInsert> };
+      bank_connections: { Row: BankConnection; Insert: BankConnectionInsert; Update: Partial<BankConnectionInsert> };
     };
   };
 }

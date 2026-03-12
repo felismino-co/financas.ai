@@ -12,6 +12,12 @@ import { categoryIcons, categoryColors, expenseCategories, incomeCategories } fr
 import type { TransactionApp } from '@/hooks/useTransactions';
 import { VoiceTransaction } from '@/components/VoiceTransaction';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { formatCurrency, parseCurrencyInput } from '@/lib/currency';
 import { toast } from 'sonner';
 import { getFraseEconomia } from '@/lib/quotes';
@@ -19,7 +25,8 @@ import type { ParsedTransaction } from '@/lib/gemini';
 
 export default function TransactionsPage() {
   const { userId, familyId } = useViewMode();
-  const { transactions, loading, addTransaction, updateTransaction, deleteTransaction } = useTransactions(userId, familyId, {});
+  const [filterSource, setFilterSource] = useState<'all' | 'manual' | 'pluggy'>('all');
+  const { transactions, loading, addTransaction, updateTransaction, deleteTransaction } = useTransactions(userId, familyId, { source: filterSource });
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -111,11 +118,17 @@ export default function TransactionsPage() {
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar transação..."
             className="pl-10 bg-muted border-border" />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex flex-wrap gap-2">
           {(['all', 'income', 'expense'] as const).map(t => (
             <button key={t} onClick={() => setFilterType(t)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${filterType === t ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
               {t === 'all' ? 'Todas' : t === 'income' ? 'Receitas' : 'Despesas'}
+            </button>
+          ))}
+          {(['all', 'manual', 'pluggy'] as const).map(s => (
+            <button key={s} onClick={() => setFilterSource(s)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${filterSource === s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+              {s === 'all' ? 'Todas' : s === 'manual' ? 'Manuais' : 'Importadas'}
             </button>
           ))}
         </div>
@@ -136,7 +149,21 @@ export default function TransactionsPage() {
                     {categoryIcons[t.category] || '📦'}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{t.description}</p>
+                    <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
+                      {t.description}
+                      {t.source === 'pluggy' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/20 text-primary">
+                                Importado
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Transação importada do banco</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">{new Date(t.date).toLocaleDateString('pt-BR')} · {t.category}</p>
                   </div>
                 </div>
@@ -144,7 +171,9 @@ export default function TransactionsPage() {
                   <span className={`text-sm font-semibold ${t.type === 'income' ? 'text-success' : 'text-danger'}`}>
                     {t.type === 'income' ? '+' : '-'}R${t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
-                  <button onClick={() => openEdit(t)} className="p-1 text-muted-foreground hover:text-foreground"><Pencil size={14} /></button>
+                  {t.source !== 'pluggy' && (
+                    <button onClick={() => openEdit(t)} className="p-1 text-muted-foreground hover:text-foreground"><Pencil size={14} /></button>
+                  )}
                   <button onClick={() => setDeleteId(t.id)} className="p-1 text-muted-foreground hover:text-danger"><Trash2 size={14} /></button>
                 </div>
               </motion.div>

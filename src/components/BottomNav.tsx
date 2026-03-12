@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, ArrowLeftRight, PieChart, Target, User, FileText, BookOpen } from 'lucide-react';
+import { Home, ArrowLeftRight, PieChart, Target, User, FileText, BookOpen, Building2 } from 'lucide-react';
 
 const items = [
   { path: '/dashboard', icon: Home, label: 'Início' },
@@ -7,6 +7,7 @@ const items = [
   { path: '/budget', icon: PieChart, label: 'Orçamento', dataTour: 'nav-budget' },
   { path: '/goals', icon: Target, label: 'Metas', dataTour: 'nav-goals' },
   { path: '/bills', icon: FileText, label: 'Contas' },
+  { path: '/banks', icon: Building2, label: 'Bancos' },
   { path: '/education', icon: BookOpen, label: 'Educação' },
   { path: '/profile', icon: User, label: 'Perfil' },
 ];

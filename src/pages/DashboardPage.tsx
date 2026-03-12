@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthState } from '@/contexts/AuthStateContext';
 import { useViewMode } from '@/contexts/ViewModeContext';
@@ -7,7 +7,7 @@ import { useGoals } from '@/hooks/useGoals';
 import { useBills } from '@/hooks/useBills';
 import { useDashboard } from '@/hooks/useDashboard';
 import { motion } from 'framer-motion';
-import { ArrowRight, TrendingUp, TrendingDown, Target, DollarSign, AlertCircle, BookOpen, Pencil } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Target, DollarSign, AlertCircle, BookOpen, Pencil, Building2, RefreshCw } from 'lucide-react';
 import { getQuoteOfDay } from '@/lib/quotes';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { categoryIcons } from '@/data/mock-data';
@@ -17,8 +17,9 @@ import { HealthScore } from '@/components/HealthScore';
 import { FamilyMode } from '@/components/FamilyMode';
 import { AppTourAutoStart } from '@/components/AppTour';
 import { Skeleton } from '@/components/ui/skeleton';
-import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useBankConnections } from '@/hooks/useBankConnections';
 
 const card = (i: number) => ({ initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay: i * 0.1 } });
 
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const { profile } = useAuthState();
   const { userId, familyId, viewMode, setViewMode } = useViewMode();
   const { transactions, loading: loadingTransactions } = useTransactions(userId, familyId, {});
+  const { connections, syncConnection } = useBankConnections(userId);
   const { goals } = useGoals(userId, familyId);
   const { bills, upcomingDue } = useBills(userId, familyId);
   const { balance, totalIncome, totalExpense, recentTransactions, score, loading } = useDashboard(
@@ -67,6 +69,13 @@ export default function DashboardPage() {
   const firstName = profile?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'Usuário';
   const insightText = 'Acompanhe suas metas e gastos para melhorar seu score financeiro.';
   const quoteOfDay = getQuoteOfDay();
+  const [syncingBank, setSyncingBank] = useState<string | null>(null);
+  const latestSync = connections.length > 0
+    ? connections.reduce((a, c) => {
+        const t = c.last_synced_at ? new Date(c.last_synced_at).getTime() : 0;
+        return t > (a ? new Date(a).getTime() : 0) ? c.last_synced_at : a;
+      }, null as string | null)
+    : null;
 
   return (
     <div className="space-y-6 pb-4">
@@ -122,6 +131,63 @@ export default function DashboardPage() {
           ))
         )}
       </div>
+
+      {!loading && connections.length > 0 && (
+        <motion.div
+          {...card(4)}
+          className="bg-card border border-border rounded-xl p-4 shadow-card cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => navigate('/banks')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Building2 size={16} className="text-primary" />
+                <span className="text-xs text-muted-foreground">Contas bancárias</span>
+              </div>
+              <p className="font-semibold text-foreground text-sm">
+                Último sync: {latestSync ? formatDistanceToNow(new Date(latestSync), { addSuffix: true, locale: ptBR }) : 'Nunca'}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const id = connections[0].id;
+                setSyncingBank(id);
+                try {
+                  await syncConnection(id);
+                } finally {
+                  setSyncingBank(null);
+                }
+              }}
+              disabled={!!syncingBank}
+            >
+              <RefreshCw size={14} className={syncingBank ? 'animate-spin' : ''} />
+            </Button>
+          </div>
+          <button type="button" className="mt-2 text-xs text-primary hover:underline">
+            Gerenciar bancos <ArrowRight size={12} className="inline ml-1" />
+          </button>
+        </motion.div>
+      )}
+
+      {!loading && connections.length === 0 && (
+        <motion.div
+          {...card(4)}
+          className="bg-card border border-border rounded-xl p-4 shadow-card cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => navigate('/banks')}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Building2 size={16} className="text-primary" />
+            <span className="text-xs text-muted-foreground">Contas bancárias</span>
+          </div>
+          <p className="font-semibold text-foreground text-sm">Conecte seu banco e importe transações automaticamente</p>
+          <button type="button" className="mt-2 text-xs text-primary hover:underline">
+            Conectar banco <ArrowRight size={12} className="inline ml-1" />
+          </button>
+        </motion.div>
+      )}
 
       {!loading && upcomingBills.length > 0 && (
         <motion.div

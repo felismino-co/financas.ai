@@ -15,6 +15,8 @@ export interface TransactionApp {
   note?: string;
   user_id?: string;
   family_id?: string | null;
+  source?: 'manual' | 'pluggy';
+  pluggy_transaction_id?: string | null;
 }
 
 function toApp(t: DbTransaction): TransactionApp {
@@ -30,6 +32,8 @@ function toApp(t: DbTransaction): TransactionApp {
     note: t.notes ?? undefined,
     user_id: t.user_id,
     family_id: t.family_id,
+    source: (t as { source?: 'manual' | 'pluggy' }).source,
+    pluggy_transaction_id: (t as { pluggy_transaction_id?: string | null }).pluggy_transaction_id,
   };
 }
 
@@ -38,6 +42,7 @@ export interface UseTransactionsFilters {
   year?: number;
   category?: string;
   type?: 'income' | 'expense' | 'all';
+  source?: 'all' | 'manual' | 'pluggy';
 }
 
 export interface UseTransactionsReturn {
@@ -89,6 +94,9 @@ export function useTransactions(
       if (filters.type && filters.type !== 'all') {
         q = q.eq('type', filters.type);
       }
+      if (filters.source && filters.source !== 'all') {
+        q = q.eq('source', filters.source);
+      }
 
       const { data, error: e } = await q;
       if (e) throw e;
@@ -99,7 +107,7 @@ export function useTransactions(
     } finally {
       setLoading(false);
     }
-  }, [userId, familyId, filters.month, filters.year, filters.category, filters.type]);
+  }, [userId, familyId, filters.month, filters.year, filters.category, filters.type, filters.source]);
 
   useEffect(() => {
     fetch();
@@ -121,6 +129,7 @@ export function useTransactions(
       recurring: data.recurring ?? false,
       frequency: data.frequency ?? null,
       notes: data.note ?? null,
+      source: 'manual',
     });
     if (e) throw e;
     await fetch();
