@@ -57,11 +57,13 @@ export function useGoals(
     setLoading(true);
     setError(null);
     try {
-      const { data, error: e } = await supabase
-        .from('goals')
-        .select('*')
-        .or(familyId ? `user_id.eq.${userId},family_id.eq.${familyId}` : `user_id.eq.${userId}`)
-        .order('deadline', { ascending: true });
+      let q = supabase.from('goals').select('*').order('deadline', { ascending: true });
+      if (familyId) {
+        q = q.or(`user_id.eq.${userId},family_id.eq.${familyId}`);
+      } else {
+        q = q.eq('user_id', userId);
+      }
+      const { data, error: e } = await q;
       if (e) throw e;
       setGoals((data || []).map(toApp));
     } catch (err) {

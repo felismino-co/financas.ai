@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useViewMode } from '@/contexts/ViewModeContext';
@@ -276,11 +277,14 @@ export default function BillsPage() {
       />
 
       <Dialog open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) resetForm(); }}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-card border-border" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>
               {editingId ? 'Editar' : form.type === 'income' ? 'Adicionar recebimento' : 'Adicionar conta a pagar'}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              {form.type === 'income' ? 'Preencha os dados do recebimento' : 'Preencha os dados da conta a pagar'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>

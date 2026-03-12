@@ -5,7 +5,9 @@ import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, PiggyBank } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { CurrencyInput, parseCurrencyInput } from '@/components/CurrencyInput';
+import { formatCurrency } from '@/lib/currency';
 import type { GoalApp } from '@/hooks/useGoals';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
@@ -42,18 +44,24 @@ export default function GoalsPage() {
 
   const openEdit = (g: GoalApp) => {
     setEditingGoal(g);
-    setName(g.name); setEmoji(g.emoji); setTarget(String(g.targetAmount));
-    setCurrent(String(g.currentAmount)); setDeadline(g.deadline); setColor(g.color);
+    setName(g.name);
+    setEmoji(g.emoji);
+    setTarget(formatCurrency(g.targetAmount));
+    setCurrent(formatCurrency(g.currentAmount));
+    setDeadline(g.deadline);
+    setColor(g.color);
     setShowModal(true);
   };
 
   const handleSave = async () => {
+    const targetNum = parseCurrencyInput(target || '0');
+    const currentNum = parseCurrencyInput(current || '0');
     try {
       if (editingGoal) {
-        await updateGoal(editingGoal.id, { name, emoji, color, targetAmount: Number(target), currentAmount: Number(current || 0), deadline });
+        await updateGoal(editingGoal.id, { name, emoji, color, targetAmount: targetNum, currentAmount: currentNum, deadline });
         toast.success('Meta atualizada.');
       } else {
-        await addGoal({ name, emoji, color, targetAmount: Number(target), currentAmount: Number(current || 0), deadline, family_id: familyId ?? undefined });
+        await addGoal({ name, emoji, color, targetAmount: targetNum, currentAmount: currentNum, deadline, family_id: familyId ?? undefined });
         toast.success('Meta criada.');
       }
       setShowModal(false);
@@ -77,7 +85,7 @@ export default function GoalsPage() {
     if (!showAddValue || !addAmount) return;
     const g = goals.find(x => x.id === showAddValue);
     if (!g) return;
-    const newAmount = g.currentAmount + Number(addAmount);
+    const newAmount = g.currentAmount + parseCurrencyInput(addAmount);
     const metaAtingida = newAmount >= g.targetAmount;
     try {
       await updateProgress(showAddValue, newAmount);
@@ -168,18 +176,24 @@ export default function GoalsPage() {
       </div>
 
       <Dialog open={!!showAddValue} onOpenChange={() => setShowAddValue(null)}>
-        <DialogContent className="bg-card border-border max-w-sm">
-          <DialogHeader><DialogTitle className="text-foreground">Adicionar Valor</DialogTitle></DialogHeader>
+        <DialogContent className="bg-card border-border max-w-sm" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Adicionar Valor</DialogTitle>
+            <DialogDescription className="sr-only">Informe o valor a adicionar à meta</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
-            <Input value={addAmount} onChange={e => setAddAmount(e.target.value)} placeholder="Valor (R$)" type="number" className="bg-muted border-border" />
+            <CurrencyInput value={addAmount} onChange={setAddAmount} placeholder="0,00" className="bg-muted border-border" />
             <Button onClick={handleAddValue} disabled={!addAmount} className="w-full bg-primary text-primary-foreground font-semibold">Adicionar</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-foreground">{editingGoal ? 'Editar' : 'Nova'} Meta</DialogTitle></DialogHeader>
+        <DialogContent className="bg-card border-border max-w-md max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle className="text-foreground">{editingGoal ? 'Editar' : 'Nova'} Meta</DialogTitle>
+            <DialogDescription className="sr-only">Preencha os dados da meta financeira</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="Nome da meta" className="bg-muted border-border" />
             <div>
@@ -193,8 +207,8 @@ export default function GoalsPage() {
                 ))}
               </div>
             </div>
-            <Input value={target} onChange={e => setTarget(e.target.value)} placeholder="Valor total (R$)" type="number" className="bg-muted border-border" />
-            <Input value={current} onChange={e => setCurrent(e.target.value)} placeholder="Valor já guardado (R$)" type="number" className="bg-muted border-border" />
+            <CurrencyInput value={target} onChange={setTarget} placeholder="0,00" className="bg-muted border-border" />
+            <CurrencyInput value={current} onChange={setCurrent} placeholder="0,00" className="bg-muted border-border" />
             <Input value={deadline} onChange={e => setDeadline(e.target.value)} placeholder="Data limite" type="date" className="bg-muted border-border" />
             <div>
               <label className="text-xs text-muted-foreground mb-2 block">Cor</label>
@@ -206,7 +220,7 @@ export default function GoalsPage() {
                 ))}
               </div>
             </div>
-            <Button onClick={handleSave} disabled={!name || !target} className="w-full bg-primary text-primary-foreground font-semibold">Salvar</Button>
+            <Button onClick={handleSave} disabled={!name || !target || parseCurrencyInput(target) <= 0} className="w-full bg-primary text-primary-foreground font-semibold">Salvar</Button>
           </div>
         </DialogContent>
       </Dialog>
