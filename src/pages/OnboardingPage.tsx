@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthState } from '@/contexts/AuthStateContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
 import { Logo } from '@/components/Logo';
 import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +12,7 @@ import { ArrowRight, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DebtEntry } from '@/types/database';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const MARITAL_OPTIONS = ['Solteiro(a)', 'Casado(a) / União estável', 'Divorciado(a)', 'Viúvo(a)'];
 const CHILDREN_OPTIONS = ['Não', 'Sim, 1 filho', 'Sim, 2 filhos', 'Sim, 3 ou mais'];
@@ -91,6 +92,10 @@ export default function OnboardingPage() {
   const [showDiagnosis, setShowDiagnosis] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const { user } = useAuth();
+  const { refetchProfile, setProfileLocal, profile: currentProfile } = useAuthState();
+  const navigate = useNavigate();
+
   const [fullName, setFullName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [maritalStatus, setMaritalStatus] = useState('');
@@ -119,10 +124,6 @@ export default function OnboardingPage() {
   const [firstGoalName, setFirstGoalName] = useState('');
   const [firstGoalAmount, setFirstGoalAmount] = useState('');
   const [firstGoalDate, setFirstGoalDate] = useState('');
-
-  const { user } = useAuth();
-  const { refetchProfile, setProfileLocal, profile: currentProfile } = useAuthState();
-  const navigate = useNavigate();
 
   const toggleGoal = (id: string) => {
     setGoalsSelected((prev) =>
@@ -199,16 +200,14 @@ export default function OnboardingPage() {
   };
 
   const canNext = () => {
-    if (step === 0)
-      return !!fullName.trim() && !!maritalStatus && !!hasChildren;
-    if (step === 1)
-      return !!incomeSource && !!incomeVariability && monthlyIncome >= 500;
-    if (step === 2) return true;
+    if (step === 0) return !!fullName.trim() && !!birthDate;
+    if (step === 1) return !!maritalStatus && !!hasChildren;
+    if (step === 2) return !!incomeSource && !!incomeVariability && monthlyIncome >= 500;
     if (step === 3) return true;
-    if (step === 4) return goalsSelected.length > 0 && !!mainGoal && !!goalTimeframe;
-    if (step === 5)
-      return !!financialProfileCard && !!plansAhead && !!extraMoneyBehavior;
-    if (step === 6) return !!firstGoalName.trim() && !!firstGoalAmount && Number(firstGoalAmount) > 0;
+    if (step === 4) return true;
+    if (step === 5) return goalsSelected.length > 0 && !!mainGoal && !!goalTimeframe;
+    if (step === 6) return !!financialProfileCard && !!plansAhead && !!extraMoneyBehavior;
+    if (step === 7) return !!firstGoalName.trim() && !!firstGoalAmount && Number(firstGoalAmount) > 0;
     return true;
   };
 
@@ -216,6 +215,30 @@ export default function OnboardingPage() {
     if (step < TOTAL_STEPS - 1) setStep((s) => s + 1);
     else setShowDiagnosis(true);
   };
+
+  const hasPrefilled = useRef(false);
+  useEffect(() => {
+    if (!currentProfile || hasPrefilled.current) return;
+    hasPrefilled.current = true;
+    if (currentProfile.name?.trim()) setFullName(currentProfile.name);
+    if (currentProfile.birth_date) setBirthDate(currentProfile.birth_date);
+    if (currentProfile.marital_status) setMaritalStatus(currentProfile.marital_status);
+    if (currentProfile.has_children) setHasChildren(currentProfile.has_children);
+    if (currentProfile.income_type) setIncomeSource(currentProfile.income_type);
+    if (currentProfile.income_variability) setIncomeVariability(currentProfile.income_variability);
+    if ((currentProfile.monthly_income ?? 0) >= 500) setMonthlyIncome(currentProfile.monthly_income ?? 3000);
+    if (currentProfile.fixed_expenses && Object.keys(currentProfile.fixed_expenses).length > 0) setFixedExpenses(currentProfile.fixed_expenses);
+    if (currentProfile.debts && currentProfile.debts.length > 0) {
+      setDebts(currentProfile.debts as DebtEntry[]);
+      setHasDebts(true);
+    }
+    if (currentProfile.goals_selected?.length) setGoalsSelected(currentProfile.goals_selected);
+    if (currentProfile.main_goal) setMainGoal(currentProfile.main_goal);
+    if (currentProfile.goal_timeframe) setGoalTimeframe(currentProfile.goal_timeframe);
+    if (currentProfile.financial_behavior) setFinancialProfileCard(currentProfile.financial_behavior);
+    if (currentProfile.plans_ahead) setPlansAhead(currentProfile.plans_ahead);
+    if (currentProfile.extra_money_behavior) setExtraMoneyBehavior(currentProfile.extra_money_behavior);
+  }, [currentProfile]);
 
   const handleStart = async () => {
     if (!user?.id) return;
@@ -421,8 +444,8 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="p-4 flex justify-center">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
+      <div className="p-4 flex justify-center shrink-0">
         <Logo size="sm" />
       </div>
       <div className="px-6 mb-4">
@@ -438,7 +461,7 @@ export default function OnboardingPage() {
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
+      <div className="flex-1 overflow-y-auto px-4 pb-6 overscroll-contain">
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.div
@@ -449,8 +472,11 @@ export default function OnboardingPage() {
               className="space-y-6"
             >
               <h2 className="text-xl font-bold text-foreground text-center">
-                Olá! Vamos te conhecer melhor 👋
+                Olá! Primeiro, vamos nos apresentar 👋
               </h2>
+              <p className="text-sm text-muted-foreground text-center">
+                Qual seu nome e data de nascimento?
+              </p>
               <Input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -466,6 +492,20 @@ export default function OnboardingPage() {
                   className="bg-muted border-border"
                 />
               </div>
+            </motion.div>
+          )}
+
+          {step === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <h2 className="text-xl font-bold text-foreground text-center">
+                Um pouco mais sobre você
+              </h2>
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">Estado civil</p>
                 <div className="space-y-2">
@@ -507,9 +547,9 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 1 && (
+          {step === 2 && (
             <motion.div
-              key="step1"
+              key="step2"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -541,16 +581,15 @@ export default function OnboardingPage() {
                 <label className="text-sm text-muted-foreground mb-2 block">
                   Renda mensal líquida aproximada (R$)
                 </label>
-                <input
-                  type="range"
+                <Slider
                   min={500}
                   max={30000}
                   step={100}
-                  value={monthlyIncome}
-                  onChange={(e) => setMonthlyIncome(Number(e.target.value))}
-                  className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer"
+                  value={[monthlyIncome]}
+                  onValueChange={([v]) => setMonthlyIncome(v ?? 500)}
+                  className="w-full"
                 />
-                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <div className="flex justify-between text-xs text-muted-foreground mt-2">
                   <span>R$ 500</span>
                   <span className="font-semibold text-foreground">
                     R$ {monthlyIncome.toLocaleString('pt-BR')}
@@ -588,9 +627,9 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <motion.div
-              key="step2"
+              key="step3"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -649,9 +688,9 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <motion.div
-              key="step3"
+              key="step4"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -721,9 +760,9 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <motion.div
-              key="step4"
+              key="step5"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -815,9 +854,9 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <motion.div
-              key="step5"
+              key="step6"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -886,9 +925,9 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <motion.div
-              key="step6"
+              key="step7"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -931,7 +970,7 @@ export default function OnboardingPage() {
         </AnimatePresence>
       </div>
 
-      <div className="p-6 flex gap-3 border-t border-border">
+      <div className="p-4 sm:p-6 flex gap-3 border-t border-border shrink-0 pb-6">
         {step > 0 && (
           <Button
             variant="outline"

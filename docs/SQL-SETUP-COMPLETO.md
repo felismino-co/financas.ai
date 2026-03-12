@@ -24,6 +24,10 @@ Adiciona colunas de email/WhatsApp em `profiles`, cria `email_logs` e `bills` (s
 
 Adiciona `source` e `pluggy_transaction_id` em `transactions` (necessário para evitar erro 500).
 
+### 2.4 `supabase-migration-fix-family-recursion.sql`
+
+Corrige o erro **"infinite recursion detected in policy for relation family_members"** no painel de contas a pagar. Use uma função SECURITY DEFINER para quebrar o ciclo entre policies de `families` e `family_members`.
+
 ---
 
 ## 3. Verificação rápida
@@ -58,4 +62,5 @@ Se ainda aparecer `profiles?select=email,...` com 400, a coluna `email` não exi
 | 500 em bills | Tabela `bills` não existe | Rodar `supabase-setup.sql` ou `supabase-migration-v2.sql` |
 | 500 em goals | Tabela ou RLS incorreto | Rodar `supabase-setup.sql` |
 | 500 em family_members | Tabela ou RLS incorreto | Rodar `supabase-setup.sql` |
+| Recursão infinita em family_members | Policies circulares | Rodar `supabase-migration-fix-family-recursion.sql` |
 | 400 em profiles | Query pede coluna `email` | Deploy da versão atual (sem email em profiles) |

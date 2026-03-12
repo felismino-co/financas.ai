@@ -38,9 +38,9 @@ const TOUR_STEPS: AnyStep[] = [
   {
     element: '[data-tour="fab-transaction"]',
     popover: {
-      title: '➕ Registrar transação',
+      title: '➕ Chat com IA',
       description:
-        'Toque aqui para registrar qualquer gasto ou receita. Pode digitar ou usar o microfone 🎤',
+        'Toque aqui para falar com sua IA financeira. Registre gastos, tire dúvidas ou peça dicas.',
       side: 'left',
       align: 'start',
     },
@@ -133,7 +133,12 @@ export function useAppTour() {
         doneBtnText: 'Concluir',
         progressText: '{{current}} de {{total}}',
         allowClose: true,
-        overlayColor: 'rgba(0,0,0,0.7)',
+        overlayColor: 'rgba(0,0,0,0.75)',
+        overlayOpacity: 0.75,
+        stagePadding: 8,
+        stageRadius: 8,
+        smoothScroll: true,
+        animate: true,
         popoverClass: 'app-tour-popover',
         onDestroyed: async () => {
           if (user?.id) {

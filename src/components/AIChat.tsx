@@ -81,7 +81,7 @@ export function AIChat() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-primary/50 bg-primary/5 hover:bg-primary/10">
+        <Button variant="outline" size="icon" data-tour="fab-transaction" className="rounded-full h-12 w-12 border-primary/50 bg-primary/5 hover:bg-primary/10">
           <MessageCircle size={22} />
         </Button>
       </SheetTrigger>

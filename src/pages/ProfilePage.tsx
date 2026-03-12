@@ -67,6 +67,33 @@ export default function ProfilePage() {
         <AICreditsBar />
       </div>
 
+      {profile && (profile.birth_date || profile.marital_status || profile.income_type || (profile.monthly_income ?? 0) > 0) && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-border rounded-xl p-4 shadow-card space-y-3">
+          <h3 className="font-semibold text-foreground text-sm">Seus dados do onboarding</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            {profile.birth_date && (
+              <div><span className="text-muted-foreground">Nascimento:</span> {new Date(profile.birth_date + 'T00:00:00').toLocaleDateString('pt-BR')}</div>
+            )}
+            {profile.marital_status && (
+              <div><span className="text-muted-foreground">Estado civil:</span> {profile.marital_status}</div>
+            )}
+            {profile.has_children && (
+              <div><span className="text-muted-foreground">Filhos:</span> {profile.has_children}</div>
+            )}
+            {(profile.monthly_income ?? 0) > 0 && (
+              <div><span className="text-muted-foreground">Renda mensal:</span> R$ {profile.monthly_income?.toLocaleString('pt-BR')}</div>
+            )}
+            {profile.income_type && (
+              <div><span className="text-muted-foreground">Fonte de renda:</span> {profile.income_type}</div>
+            )}
+            {profile.main_goal && (
+              <div><span className="text-muted-foreground">Principal objetivo:</span> {profile.main_goal}</div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         className="bg-card border border-border rounded-xl p-6 shadow-card text-center">
         <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold mx-auto mb-3 overflow-hidden">
