@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Logo } from '@/components/Logo';
 import { supabase } from '@/lib/supabase';
+import { useScore } from '@/hooks/useScore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -74,8 +75,8 @@ const EXTRA_MONEY_OPTIONS = [
 
 const CATEGORY_TO_APP: Record<string, string> = {
   rent: 'Moradia',
-  electricity: 'Outros',
-  water: 'Outros',
+  electricity: 'Moradia',
+  water: 'Moradia',
   internet: 'Assinaturas',
   transport: 'Transporte',
   health: 'Saúde',
@@ -87,6 +88,21 @@ const CATEGORY_TO_APP: Record<string, string> = {
   other: 'Outros',
 };
 
+const DUE_DAY_BY_KEY: Record<string, number> = {
+  rent: 10,
+  electricity: 15,
+  water: 15,
+  internet: 20,
+  transport: 1,
+  health: 10,
+  education: 10,
+  installments: 15,
+  pet: 15,
+  gym: 5,
+  subscriptions: 15,
+  other: 15,
+};
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [showDiagnosis, setShowDiagnosis] = useState(false);
@@ -94,6 +110,7 @@ export default function OnboardingPage() {
 
   const { user } = useAuth();
   const { refetchProfile, setProfileLocal, profile: currentProfile } = useAuthState();
+  const { addScore } = useScore();
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState('');
@@ -284,31 +301,58 @@ export default function OnboardingPage() {
         if (!value || value <= 0) continue;
         const label = FIXED_EXPENSE_CATEGORIES.find((c) => c.key === key)?.label ?? key;
         const category = CATEGORY_TO_APP[key] ?? 'Outros';
-        await supabase.from('transactions').insert({
+        const dueDay = DUE_DAY_BY_KEY[key] ?? 15;
+        await supabase.from('bills').insert({
           user_id: user.id,
           family_id: null,
           description: label,
           amount: value,
+          due_day: dueDay,
           type: 'expense',
           category,
-          date: firstDay,
-          recurring: true,
-          frequency: 'monthly',
-          notes: 'Gasto fixo (onboarding)',
+          is_recurring: true,
         });
       }
       if (otherExpenseLabel.trim() && otherExpenseValue > 0) {
-        await supabase.from('transactions').insert({
+        await supabase.from('bills').insert({
           user_id: user.id,
           family_id: null,
           description: otherExpenseLabel.trim(),
           amount: otherExpenseValue,
+          due_day: 15,
           type: 'expense',
           category: 'Outros',
+          is_recurring: true,
+        });
+      }
+
+      for (const d of debts) {
+        if (!d.name?.trim() || (d.monthly ?? 0) <= 0) continue;
+        await supabase.from('bills').insert({
+          user_id: user.id,
+          family_id: null,
+          description: d.name.trim(),
+          amount: d.monthly,
+          due_day: 15,
+          type: 'expense',
+          category: 'Parcelas',
+          is_recurring: true,
+          installments: d.total > 0 && d.monthly > 0 ? Math.ceil(d.total / d.monthly) : 1,
+        });
+      }
+
+      if (monthlyIncome >= 500) {
+        await supabase.from('transactions').insert({
+          user_id: user.id,
+          family_id: null,
+          description: 'Renda mensal (estimativa)',
+          amount: monthlyIncome,
+          type: 'income',
+          category: 'Salário',
           date: firstDay,
           recurring: true,
           frequency: 'monthly',
-          notes: 'Gasto fixo (onboarding)',
+          notes: 'Onboarding',
         });
       }
 
@@ -360,6 +404,7 @@ export default function OnboardingPage() {
       } as typeof currentProfile;
       setProfileLocal(updatedProfile);
       await refetchProfile();
+      if (user?.id) addScore(user.id, 'onboarding_complete');
       toast.success('Perfil salvo! Bem-vindo ao FinanceIA.');
       navigate('/dashboard', { replace: true });
     } catch (e) {
@@ -578,9 +623,12 @@ export default function OnboardingPage() {
                 </div>
               </div>
               <div>
-                <label className="text-sm text-muted-foreground mb-2 block">
-                  Renda mensal líquida aproximada (R$)
+                <label className="text-sm font-medium text-foreground mb-1 block">
+                  Estimativa de ganhos mensais
                 </label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Não se preocupe, isso é só uma estimativa. Você pode ajustar a qualquer momento.
+                </p>
                 <Slider
                   min={500}
                   max={30000}
@@ -602,6 +650,7 @@ export default function OnboardingPage() {
                   max={30000}
                   value={monthlyIncome || ''}
                   onChange={(e) => setMonthlyIncome(Number(e.target.value) || 0)}
+                  placeholder="Ex: R$ 3.000"
                   className="mt-2 bg-muted border-border"
                 />
               </div>

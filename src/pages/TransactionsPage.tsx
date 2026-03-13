@@ -22,9 +22,14 @@ import { formatCurrency, parseCurrencyInput } from '@/lib/currency';
 import { toast } from 'sonner';
 import { getFraseEconomia } from '@/lib/quotes';
 import type { ParsedTransaction } from '@/lib/gemini';
+import { useAuth } from '@/hooks/useAuth';
+import { useScore } from '@/hooks/useScore';
+import { checkAndUnlock } from '@/lib/achievements';
 
 export default function TransactionsPage() {
+  const { user } = useAuth();
   const { userId, familyId } = useViewMode();
+  const { addScore, updateStreak } = useScore();
   const [filterSource, setFilterSource] = useState<'all' | 'manual' | 'pluggy'>('all');
   const { transactions, loading, addTransaction, updateTransaction, deleteTransaction } = useTransactions(userId, familyId, { source: filterSource });
   const [search, setSearch] = useState('');
@@ -83,6 +88,11 @@ export default function TransactionsPage() {
         toast.success('Transação atualizada.');
       } else {
         await addTransaction({ type: txType, description: txDesc, amount, date: txDate, category: txCategory, note: noteWithDay || undefined, recurring: txRecurring, frequency: txRecurring ? txFreq : undefined, family_id: familyId ?? undefined });
+        if (user?.id) {
+          addScore(user.id, 'transaction');
+          updateStreak(user.id);
+          checkAndUnlock(user.id, 'primeira_semente');
+        }
         if (txType === 'income') {
           toast.success(getFraseEconomia());
         } else {

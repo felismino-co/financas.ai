@@ -11,6 +11,10 @@ export interface BillApp {
   type: 'income' | 'expense';
   category: string | null;
   is_recurring: boolean;
+  is_variable?: boolean;
+  paid_at?: string | null;
+  installments?: number;
+  paid_installments?: number;
 }
 
 function toApp(b: Bill): BillApp {
@@ -22,6 +26,10 @@ function toApp(b: Bill): BillApp {
     type: b.type as 'income' | 'expense',
     category: b.category,
     is_recurring: b.is_recurring,
+    is_variable: b.is_variable,
+    paid_at: b.paid_at,
+    installments: b.installments ?? 1,
+    paid_installments: b.paid_installments ?? 0,
   };
 }
 
@@ -64,7 +72,7 @@ export function useBills(userId: string | undefined, familyId: string | null | u
   const addBill = async (data: Omit<BillApp, 'id'>) => {
     if (!userId) throw new Error('Usuário não autenticado');
     setError(null);
-    const { error: e } = await supabase.from('bills').insert({
+    const payload: Record<string, unknown> = {
       user_id: userId,
       family_id: familyId ?? null,
       description: data.description,
@@ -73,7 +81,9 @@ export function useBills(userId: string | undefined, familyId: string | null | u
       type: data.type,
       category: data.category ?? null,
       is_recurring: data.is_recurring ?? true,
-    });
+    };
+    if (data.is_variable !== undefined) payload.is_variable = data.is_variable;
+    const { error: e } = await supabase.from('bills').insert(payload);
     if (e) throw e;
     await fetch();
   };
@@ -87,6 +97,25 @@ export function useBills(userId: string | undefined, familyId: string | null | u
     if (data.type !== undefined) payload.type = data.type;
     if (data.category !== undefined) payload.category = data.category;
     if (data.is_recurring !== undefined) payload.is_recurring = data.is_recurring;
+    if (data.is_variable !== undefined) payload.is_variable = data.is_variable;
+    if (data.paid_at !== undefined) payload.paid_at = data.paid_at;
+    if (data.installments !== undefined) payload.installments = data.installments;
+    if (data.paid_installments !== undefined) payload.paid_installments = data.paid_installments;
+    const { error: e } = await supabase.from('bills').update(payload).eq('id', id);
+    if (e) throw e;
+    await fetch();
+  };
+
+  const markAsPaid = async (id: string) => {
+    setError(null);
+    const bill = bills.find((b) => b.id === id);
+    if (!bill) return;
+    const installments = bill.installments ?? 1;
+    const paid = (bill.paid_installments ?? 0) + 1;
+    const payload: Record<string, unknown> =
+      installments > 1 && paid < installments
+        ? { paid_installments: paid }
+        : { paid_at: new Date().toISOString(), paid_installments: installments };
     const { error: e } = await supabase.from('bills').update(payload).eq('id', id);
     if (e) throw e;
     await fetch();
@@ -119,6 +148,7 @@ export function useBills(userId: string | undefined, familyId: string | null | u
     addBill,
     updateBill,
     deleteBill,
+    markAsPaid,
     upcomingDue,
   };
 }

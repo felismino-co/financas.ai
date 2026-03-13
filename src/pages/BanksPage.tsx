@@ -12,11 +12,14 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useScore } from '@/hooks/useScore';
+import { checkAndUnlock } from '@/lib/achievements';
 
 const KIWIFY_BANCO_EXTRA = '#kiwify-banco-extra';
 
 export default function BanksPage() {
   const { user } = useAuth();
+  const { addScore } = useScore();
   const navigate = useNavigate();
   const {
     connections,
@@ -66,6 +69,10 @@ export default function BanksPage() {
       try {
         const name = data.item.connector?.name || 'Banco';
         await addConnection(data.item.id, name);
+        if (user?.id) {
+          addScore(user.id, 'bank_connected');
+          checkAndUnlock(user.id, 'conectado');
+        }
         setShowWidget(false);
         setConnectToken(null);
         toast.success(`Banco ${name} conectado! Sincronizando transações...`);
@@ -75,7 +82,7 @@ export default function BanksPage() {
         toast.error(e instanceof Error ? e.message : 'Erro ao salvar conexão');
       }
     },
-    [user?.id, addConnection]
+    [user?.id, addConnection, addScore]
   );
 
   const onError = useCallback((err: { message?: string }) => {

@@ -49,6 +49,10 @@ export interface Profile {
     goal_achieved?: boolean;
     monthly_plan?: boolean;
   };
+  score?: number;
+  score_level?: string;
+  streak_days?: number;
+  last_activity_date?: string | null;
 }
 
 export interface Bill {
@@ -61,6 +65,10 @@ export interface Bill {
   type: 'income' | 'expense';
   category: string | null;
   is_recurring: boolean;
+  is_variable?: boolean;
+  paid_at?: string | null;
+  installments?: number;
+  paid_installments?: number;
   created_at: string;
 }
 

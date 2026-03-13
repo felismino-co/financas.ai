@@ -14,6 +14,7 @@ import { categoryIcons } from '@/data/mock-data';
 import { useNavigate } from 'react-router-dom';
 import { NotificationsDropdown } from '@/components/NotificationsDropdown';
 import { HealthScore } from '@/components/HealthScore';
+import { ScoreProgressCard } from '@/components/ScoreProgressCard';
 import { FamilyMode } from '@/components/FamilyMode';
 import { AppTourAutoStart } from '@/components/AppTour';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -338,7 +339,10 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      <div data-tour="score-card"><HealthScore score={score} /></div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div data-tour="score-card"><HealthScore score={score} /></div>
+        <ScoreProgressCard score={profile?.score ?? 0} />
+      </div>
     </div>
   );
 }

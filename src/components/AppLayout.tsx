@@ -21,7 +21,7 @@ function AppLayoutContent() {
     <div className="flex min-h-screen bg-background">
       <InstallPWA />
       <DesktopSidebar />
-      <main className="flex-1 p-4 pb-20 md:pb-4 md:p-6 max-w-4xl mx-auto w-full">
+      <main className="flex-1 p-4 pb-24 md:pb-4 md:p-6 max-w-4xl mx-auto w-full">
         <Outlet context={{ viewMode, setViewMode }} />
       </main>
       <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40">

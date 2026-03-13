@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, ArrowLeftRight, PieChart, Target, User, BarChart3, Sparkles, FileText, BookOpen, Building2 } from 'lucide-react';
+import { Home, ArrowLeftRight, PieChart, Target, User, BarChart3, Sparkles, FileText, BookOpen, Building2, Wallet } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 
 const items = [
@@ -7,7 +7,8 @@ const items = [
   { path: '/transactions', icon: ArrowLeftRight, label: 'Transações' },
   { path: '/budget', icon: PieChart, label: 'Orçamento' },
   { path: '/goals', icon: Target, label: 'Metas' },
-  { path: '/bills', icon: FileText, label: 'Contas' },
+  { path: '/bills', icon: FileText, label: 'Dívidas' },
+  { path: '/receivables', icon: Wallet, label: 'A Receber' },
   { path: '/banks', icon: Building2, label: 'Bancos' },
   { path: '/education', icon: BookOpen, label: 'Educação' },
   { path: '/insights', icon: Sparkles, label: 'Insights IA' },

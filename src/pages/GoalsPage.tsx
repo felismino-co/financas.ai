@@ -11,15 +11,20 @@ import { formatCurrency } from '@/lib/currency';
 import type { GoalApp } from '@/hooks/useGoals';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
-import { celebrateGoal } from '@/lib/confetti';
+import { celebrateGoal, celebrateProgress } from '@/lib/confetti';
+import { useScore } from '@/hooks/useScore';
+import { useAuth } from '@/hooks/useAuth';
+import { checkAndUnlock } from '@/lib/achievements';
 import { getFraseEconomia, getFraseMetaAtingida } from '@/lib/quotes';
 
 const emojiOptions = ['🎯', '✈️', '🛡️', '💻', '🏠', '🚗', '📚', '💍', '🎮', '🏖️'];
 const colorOptions = ['#00D4AA', '#7C3AED', '#F39C12', '#E74C3C', '#3498DB', '#E91E63'];
 
 export default function GoalsPage() {
+  const { user } = useAuth();
   const { userId, familyId } = useViewMode();
   const { goals, loading, addGoal, updateGoal, deleteGoal, updateProgress } = useGoals(userId, familyId);
+  const { addScore } = useScore();
   const [showModal, setShowModal] = useState(false);
   const [showAddValue, setShowAddValue] = useState<string | null>(null);
   const [addAmount, setAddAmount] = useState('');
@@ -62,6 +67,10 @@ export default function GoalsPage() {
         toast.success('Meta atualizada.');
       } else {
         await addGoal({ name, emoji, color, targetAmount: targetNum, currentAmount: currentNum, deadline, family_id: familyId ?? undefined });
+        if (user?.id) {
+          addScore(user.id, 'goal_created');
+          checkAndUnlock(user.id, 'sonhador');
+        }
         toast.success('Meta criada.');
       }
       setShowModal(false);
@@ -87,15 +96,28 @@ export default function GoalsPage() {
     if (!g) return;
     const newAmount = g.currentAmount + parseCurrencyInput(addAmount);
     const metaAtingida = newAmount >= g.targetAmount;
+    const prevPct = Math.round((g.currentAmount / g.targetAmount) * 100);
+    const newPct = Math.round((newAmount / g.targetAmount) * 100);
     try {
       await updateProgress(showAddValue, newAmount);
       setShowAddValue(null);
       setAddAmount('');
       if (metaAtingida) {
         celebrateGoal();
+        if (user?.id) addScore(user.id, 'goal_achieved');
         toast.success(getFraseMetaAtingida(), { duration: 5000 });
       } else {
-        toast.success(getFraseEconomia());
+        let celebrou = false;
+        for (const m of [10, 25, 50, 75]) {
+          if (prevPct < m && newPct >= m) {
+            celebrateProgress(m);
+            const msgs: Record<number, string> = { 10: '🌱 Você começou! Continue assim!', 25: '💪 Já é 1/4 do caminho!', 50: '⚡ Metade do caminho!', 75: '🎯 Quase lá!' };
+            toast.success(msgs[m] ?? '', { duration: 3000 });
+            celebrou = true;
+            break;
+          }
+        }
+        if (!celebrou) toast.success(getFraseEconomia());
       }
     } catch {
       toast.error('Erro ao adicionar.');
