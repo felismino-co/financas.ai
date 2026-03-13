@@ -7,11 +7,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 
-const PLANS = [
+const PLANS: { name: string; priceMain: string; priceSub: string | null; badge: string | null; features: string[]; cta: string; href: string; className: string }[] = [
   {
     name: 'Pro Mensal',
-    price: 'R$ 47',
-    period: '/mês',
+    priceMain: 'R$ 47/mês',
+    priceSub: null,
     badge: null,
     features: [
       'Créditos de IA ilimitados',
@@ -29,24 +29,20 @@ const PLANS = [
   },
   {
     name: 'Pro Semestral',
-    price: 'R$ 197',
-    period: '/ 6 meses',
-    badge: 'Economize R$85',
-    features: [
-      'Equivale a R$ 32,83/mês',
-      'Todos os benefícios do Pro Mensal',
-    ],
+    priceMain: '6x R$ 32,83',
+    priceSub: 'ou R$ 197 à vista',
+    badge: 'Economize R$ 85',
+    features: ['Todos os benefícios do Pro Mensal'],
     cta: 'Assinar por R$197',
     href: 'https://pay.kiwify.com.br/uzUMxK5',
     className: 'bg-purple-600 text-white',
   },
   {
     name: 'Pro Anual',
-    price: 'R$ 297',
-    period: '/ano',
-    badge: '🔥 Mais popular — Economize R$267',
+    priceMain: '12x R$ 24,75',
+    priceSub: 'ou R$ 297 à vista',
+    badge: 'Economize R$ 267 🔥 Mais popular',
     features: [
-      '12x de R$ 24,75',
       'Todos os benefícios do Pro Mensal',
       'Acesso antecipado a novas funcionalidades',
     ],
@@ -91,12 +87,11 @@ export function UpgradeModal({
                   {plan.badge}
                 </span>
               )}
-              <p className="font-semibold text-foreground">
-                {plan.name} — {plan.price}
-                <span className="text-muted-foreground font-normal">
-                  {plan.period}
-                </span>
-              </p>
+              <p className="font-semibold text-foreground">{plan.name}</p>
+              <p className="text-xl font-bold text-foreground">{plan.priceMain}</p>
+              {plan.priceSub && (
+                <p className="text-xs text-muted-foreground">{plan.priceSub}</p>
+              )}
               <ul className="text-xs text-muted-foreground mt-2 space-y-1">
                 {plan.features.slice(0, 3).map((f, i) => (
                   <li key={i}>• {f}</li>

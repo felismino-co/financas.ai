@@ -6,8 +6,9 @@ import { Check } from 'lucide-react';
 const PLANS = [
   {
     name: 'Grátis',
-    price: 'R$ 0',
-    period: '/mês',
+    priceMain: 'R$ 0',
+    priceSub: null,
+    badge: null,
     features: [
       '30 créditos de IA por mês',
       'Até 50 lançamentos/mês',
@@ -22,8 +23,9 @@ const PLANS = [
   },
   {
     name: 'Pro Mensal',
-    price: 'R$ 47',
-    period: '/mês',
+    priceMain: 'R$ 47/mês',
+    priceSub: null,
+    badge: null,
     features: [
       'Créditos de IA ilimitados',
       'Lançamentos ilimitados',
@@ -41,10 +43,10 @@ const PLANS = [
   },
   {
     name: 'Pro Semestral',
-    price: 'R$ 197',
-    period: '/ 6 meses',
-    badge: 'Economize R$85',
-    features: ['Equivale a R$ 32,83/mês', 'Todos os benefícios do Pro Mensal'],
+    priceMain: '6x R$ 32,83',
+    priceSub: 'ou R$ 197 à vista',
+    badge: 'Economize R$ 85',
+    features: ['Todos os benefícios do Pro Mensal'],
     cta: 'Assinar por R$197',
     href: 'https://pay.kiwify.com.br/uzUMxK5',
     current: false,
@@ -52,10 +54,9 @@ const PLANS = [
   },
   {
     name: 'Pro Anual',
-    price: 'R$ 297',
-    period: '/ano',
-    badge: '🔥 Mais popular — Economize R$267',
-    sub: '12x de R$ 24,75',
+    priceMain: '12x R$ 24,75',
+    priceSub: 'ou R$ 297 à vista',
+    badge: 'Economize R$ 267 🔥 Mais popular',
     features: [
       'Todos os benefícios do Pro Mensal',
       'Acesso antecipado a novas funcionalidades',
@@ -115,14 +116,11 @@ export default function PricingPage() {
               )}
               <h3 className="font-semibold text-foreground">{plan.name}</h3>
               <p className="text-2xl font-bold text-foreground mt-1">
-                {plan.price}
-                <span className="text-sm font-normal text-muted-foreground">
-                  {plan.period}
-                </span>
+                {(plan as { priceMain: string }).priceMain}
               </p>
-              {(plan as { sub?: string }).sub && (
+              {(plan as { priceSub?: string }).priceSub && (
                 <p className="text-sm text-muted-foreground mt-1">
-                  {(plan as { sub: string }).sub}
+                  {(plan as { priceSub: string }).priceSub}
                 </p>
               )}
               <ul className="mt-4 space-y-2">

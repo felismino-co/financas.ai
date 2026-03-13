@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthState } from '@/contexts/AuthStateContext';
+import { usePlan } from '@/hooks/usePlan';
 import { startOfMonth, isBefore } from 'date-fns';
 
 export const AI_CREDITS_COSTS: Record<string, number> = {
@@ -15,9 +16,11 @@ export const AI_CREDITS_COSTS: Record<string, number> = {
 export function useAICredits() {
   const { user } = useAuth();
   const { profile, refetchProfile } = useAuthState();
+  const { isPro } = usePlan();
 
   const used = profile?.ai_credits_used ?? 0;
-  const limit = profile?.ai_credits_limit ?? 30;
+  const dbLimit = profile?.ai_credits_limit ?? 30;
+  const limit = isPro ? 999999 : dbLimit;
   const resetAt = profile?.ai_credits_reset_at
     ? new Date(profile.ai_credits_reset_at)
     : null;

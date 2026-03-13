@@ -53,6 +53,8 @@ export interface Profile {
   score_level?: string;
   streak_days?: number;
   last_activity_date?: string | null;
+  skills?: { selected?: string[]; custom?: string };
+  income_sources?: Array<{ name: string; amount: number; frequency: string; dueDay?: number }>;
 }
 
 export interface Bill {
@@ -69,6 +71,7 @@ export interface Bill {
   paid_at?: string | null;
   installments?: number;
   paid_installments?: number;
+  source?: 'manual' | 'onboarding';
   created_at: string;
 }
 

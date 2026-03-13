@@ -39,16 +39,14 @@ export function AIChat() {
     const msg = text.trim();
     if (!msg || !canSend) return;
 
+    if (!isUnlimited && remaining < CHAT_CREDIT_COST) {
+      setMessages((m) => [...m, { role: 'assistant', text: 'Você não tem créditos suficientes. Faça upgrade para continuar.' }]);
+      return;
+    }
+
     setMessages((m) => [...m, { role: 'user', text: msg }]);
     setInput('');
     setLoading(true);
-
-    const ok = await consumeCredit('chat_guidado');
-    if (!ok && !isUnlimited) {
-      setMessages((m) => [...m, { role: 'assistant', text: 'Você não tem créditos suficientes. Faça upgrade para continuar.' }]);
-      setLoading(false);
-      return;
-    }
 
     try {
       const reply = await generateChatResponse(msg, {
@@ -56,8 +54,15 @@ export function AIChat() {
         financialGoal: profile?.financial_goal,
         recentSummary: `Perfil: ${profile?.financial_profile ?? 'não definido'}`,
       });
+      if (!isUnlimited) {
+        const ok = await consumeCredit('chat_guidado');
+        if (!ok) {
+          setMessages((m) => [...m, { role: 'assistant', text: 'Resposta gerada, mas não foi possível registrar o crédito. Tente novamente.' }]);
+          setLoading(false);
+          return;
+        }
+      }
       setMessages((m) => [...m, { role: 'assistant', text: reply }]);
-
       if (user?.id) {
         await supabase.from('insights').insert({
           user_id: user.id,
@@ -71,7 +76,7 @@ export function AIChat() {
     } catch (e) {
       setMessages((m) => [
         ...m,
-        { role: 'assistant', text: e instanceof Error ? e.message : 'Erro ao processar. Tente novamente.' },
+        { role: 'assistant', text: e instanceof Error ? e.message : 'Erro ao processar. Verifique se a API está configurada (VITE_GEMINI_API_KEY) e tente novamente.' },
       ]);
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthState } from '@/contexts/AuthStateContext';
@@ -12,8 +12,30 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DebtEntry } from '@/types/database';
+import { DateScrollPicker } from '@/components/DateScrollPicker';
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 10;
+
+const INCOME_SOURCE_SUGGESTIONS = [
+  'Salário CLT', 'Salário PJ', 'Freelance', 'Aluguel de imóvel',
+  'Pensão', 'Aposentadoria', 'Negócio próprio', 'Investimentos', 'Outros',
+];
+const INCOME_FREQUENCY_OPTIONS = [
+  { value: 'monthly', label: 'Todo mês (dia fixo)' },
+  { value: 'bimonthly', label: 'A cada 2 meses' },
+  { value: 'weekly', label: 'Semanal' },
+  { value: 'irregular', label: 'Irregular' },
+];
+
+const SKILL_CATEGORIES: { icon: string; skills: string[] }[] = [
+  { icon: '💇', skills: ['Corte de cabelo', 'Manicure', 'Maquiagem', 'Sobrancelha', 'Barba'] },
+  { icon: '🔧', skills: ['Elétrica', 'Hidráulica', 'Informática', 'Mecânica', 'Pintura'] },
+  { icon: '📱', skills: ['Design', 'Programação', 'Social Media', 'Edição de vídeo', 'SEO'] },
+  { icon: '🍳', skills: ['Confeitaria', 'Salgados', 'Marmita', 'Churrasco', 'Bolos'] },
+  { icon: '📚', skills: ['Aulas particulares', 'Idiomas', 'Música', 'Esportes', 'Reforço escolar'] },
+  { icon: '🚗', skills: ['Motorista', 'Entregador', 'Diarista', 'Jardineiro', 'Cuidador'] },
+  { icon: '💼', skills: ['Vendas', 'Marketing', 'Finanças', 'RH', 'Jurídico'] },
+];
 
 const MARITAL_OPTIONS = ['Solteiro(a)', 'Casado(a) / União estável', 'Divorciado(a)', 'Viúvo(a)'];
 const CHILDREN_OPTIONS = ['Não', 'Sim, 1 filho', 'Sim, 2 filhos', 'Sim, 3 ou mais'];
@@ -73,19 +95,19 @@ const EXTRA_MONEY_OPTIONS = [
   'Invisto ou guardo de verdade',
 ];
 
-const CATEGORY_TO_APP: Record<string, string> = {
-  rent: 'Moradia',
-  electricity: 'Moradia',
-  water: 'Moradia',
-  internet: 'Assinaturas',
-  transport: 'Transporte',
-  health: 'Saúde',
-  education: 'Educação',
-  installments: 'Outros',
-  pet: 'Outros',
-  gym: 'Lazer',
-  subscriptions: 'Assinaturas',
-  other: 'Outros',
+const EXPENSE_TO_BILL: Record<string, { category: string; description: string }> = {
+  rent: { category: 'Moradia', description: 'Aluguel' },
+  electricity: { category: 'Moradia', description: 'Energia Elétrica' },
+  water: { category: 'Moradia', description: 'Água' },
+  internet: { category: 'Moradia', description: 'Internet' },
+  transport: { category: 'Transporte', description: 'Combustível' },
+  health: { category: 'Saúde', description: 'Plano de saúde' },
+  education: { category: 'Educação', description: 'Educação' },
+  installments: { category: 'Outros', description: 'Parcelas' },
+  pet: { category: 'Outros', description: 'Pet' },
+  gym: { category: 'Saúde', description: 'Academia' },
+  subscriptions: { category: 'Assinaturas', description: 'Assinaturas' },
+  other: { category: 'Outros', description: 'Outros' },
 };
 
 const DUE_DAY_BY_KEY: Record<string, number> = {
@@ -114,7 +136,7 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState('');
-  const [birthDate, setBirthDate] = useState('');
+  const [birthDate, setBirthDate] = useState('1990-01-01');
   const [maritalStatus, setMaritalStatus] = useState('');
   const [hasChildren, setHasChildren] = useState('');
 
@@ -138,6 +160,9 @@ export default function OnboardingPage() {
   const [plansAhead, setPlansAhead] = useState('');
   const [extraMoneyBehavior, setExtraMoneyBehavior] = useState('');
 
+  const [incomeSources, setIncomeSources] = useState<Array<{ name: string; amount: number; frequency: string; dueDay?: number }>>([]);
+  const [skillsSelected, setSkillsSelected] = useState<string[]>([]);
+  const [skillsCustom, setSkillsCustom] = useState('');
   const [firstGoalName, setFirstGoalName] = useState('');
   const [firstGoalAmount, setFirstGoalAmount] = useState('');
   const [firstGoalDate, setFirstGoalDate] = useState('');
@@ -221,17 +246,38 @@ export default function OnboardingPage() {
     if (step === 1) return !!maritalStatus && !!hasChildren;
     if (step === 2) return !!incomeSource && !!incomeVariability && monthlyIncome >= 500;
     if (step === 3) return true;
-    if (step === 4) return true;
-    if (step === 5) return goalsSelected.length > 0 && !!mainGoal && !!goalTimeframe;
-    if (step === 6) return !!financialProfileCard && !!plansAhead && !!extraMoneyBehavior;
-    if (step === 7) return !!firstGoalName.trim() && !!firstGoalAmount && Number(firstGoalAmount) > 0;
+    if (step === 4) return incomeSources.length >= 1 && incomeSources.every((s) => s.name.trim() && s.amount > 0);
+    if (step === 5) return true;
+    if (step === 6) return goalsSelected.length > 0 && !!mainGoal && !!goalTimeframe;
+    if (step === 7) return !!financialProfileCard && !!plansAhead && !!extraMoneyBehavior;
+    if (step === 8) return true;
+    if (step === 9) return !!firstGoalName.trim() && !!firstGoalAmount && Number(firstGoalAmount) > 0;
     return true;
   };
 
+  const [shake, setShake] = useState(false);
   const handleNext = () => {
+    if (!canNext()) {
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      return;
+    }
     if (step < TOTAL_STEPS - 1) setStep((s) => s + 1);
     else setShowDiagnosis(true);
   };
+  const handleNextRef = useRef(handleNext);
+  handleNextRef.current = handleNext;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !showDiagnosis) {
+        e.preventDefault();
+        handleNextRef.current();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showDiagnosis]);
 
   const hasPrefilled = useRef(false);
   useEffect(() => {
@@ -255,6 +301,14 @@ export default function OnboardingPage() {
     if (currentProfile.financial_behavior) setFinancialProfileCard(currentProfile.financial_behavior);
     if (currentProfile.plans_ahead) setPlansAhead(currentProfile.plans_ahead);
     if (currentProfile.extra_money_behavior) setExtraMoneyBehavior(currentProfile.extra_money_behavior);
+    if (currentProfile.income_sources && Array.isArray(currentProfile.income_sources) && currentProfile.income_sources.length > 0) {
+      setIncomeSources(currentProfile.income_sources as Array<{ name: string; amount: number; frequency: string; dueDay?: number }>);
+    } else {
+      setIncomeSources([{ name: 'Salário CLT', amount: currentProfile.monthly_income ?? 3000, frequency: 'monthly', dueDay: 15 }]);
+    }
+    const sk = currentProfile?.skills as { selected?: string[]; custom?: string } | undefined;
+    if (sk?.selected?.length) setSkillsSelected(sk.selected);
+    if (sk?.custom) setSkillsCustom(sk.custom);
   }, [currentProfile]);
 
   const handleStart = async () => {
@@ -284,6 +338,8 @@ export default function OnboardingPage() {
         plans_ahead: plansAhead || null,
         extra_money_behavior: extraMoneyBehavior || null,
         tour_completed: currentProfile?.tour_completed ?? false,
+        skills: { selected: skillsSelected, custom: skillsCustom.trim() || undefined },
+        income_sources: incomeSources,
       };
 
       const { error: profileError } = await supabase
@@ -297,63 +353,77 @@ export default function OnboardingPage() {
         .toISOString()
         .split('T')[0];
 
-      for (const [key, value] of Object.entries(fixedExpenses)) {
-        if (!value || value <= 0) continue;
-        const label = FIXED_EXPENSE_CATEGORIES.find((c) => c.key === key)?.label ?? key;
-        const category = CATEGORY_TO_APP[key] ?? 'Outros';
-        const dueDay = DUE_DAY_BY_KEY[key] ?? 15;
-        await supabase.from('bills').insert({
-          user_id: user.id,
-          family_id: null,
-          description: label,
-          amount: value,
-          due_day: dueDay,
-          type: 'expense',
-          category,
-          is_recurring: true,
-        });
-      }
-      if (otherExpenseLabel.trim() && otherExpenseValue > 0) {
-        await supabase.from('bills').insert({
-          user_id: user.id,
-          family_id: null,
-          description: otherExpenseLabel.trim(),
-          amount: otherExpenseValue,
-          due_day: 15,
-          type: 'expense',
-          category: 'Outros',
-          is_recurring: true,
-        });
+      const { data: existingBills } = await supabase.from('bills').select('id').eq('user_id', user.id).eq('source', 'onboarding');
+      const hasOnboardingBills = (existingBills?.length ?? 0) > 0;
+
+      if (!hasOnboardingBills) {
+        for (const [key, value] of Object.entries(fixedExpenses)) {
+          if (!value || value <= 0) continue;
+          const mapping = EXPENSE_TO_BILL[key] ?? { category: 'Outros', description: key };
+          const dueDay = DUE_DAY_BY_KEY[key] ?? 15;
+          await supabase.from('bills').insert({
+            user_id: user.id,
+            family_id: null,
+            description: mapping.description,
+            amount: value,
+            due_day: dueDay,
+            type: 'expense',
+            category: mapping.category,
+            is_recurring: true,
+            source: 'onboarding',
+          });
+        }
+        if (otherExpenseLabel.trim() && otherExpenseValue > 0) {
+          await supabase.from('bills').insert({
+            user_id: user.id,
+            family_id: null,
+            description: otherExpenseLabel.trim(),
+            amount: otherExpenseValue,
+            due_day: 15,
+            type: 'expense',
+            category: 'Outros',
+            is_recurring: true,
+            source: 'onboarding',
+          });
+        }
+
+        for (const d of debts) {
+          if (!d.name?.trim() || (d.monthly ?? 0) <= 0) continue;
+          await supabase.from('bills').insert({
+            user_id: user.id,
+            family_id: null,
+            description: d.name.trim(),
+            amount: d.monthly,
+            due_day: 15,
+            type: 'expense',
+            category: 'Dívida',
+            is_recurring: true,
+            installments: d.total > 0 && d.monthly > 0 ? Math.ceil(d.total / d.monthly) : 1,
+            source: 'onboarding',
+          });
+        }
       }
 
-      for (const d of debts) {
-        if (!d.name?.trim() || (d.monthly ?? 0) <= 0) continue;
-        await supabase.from('bills').insert({
-          user_id: user.id,
-          family_id: null,
-          description: d.name.trim(),
-          amount: d.monthly,
-          due_day: 15,
-          type: 'expense',
-          category: 'Parcelas',
-          is_recurring: true,
-          installments: d.total > 0 && d.monthly > 0 ? Math.ceil(d.total / d.monthly) : 1,
-        });
-      }
-
-      if (monthlyIncome >= 500) {
-        await supabase.from('transactions').insert({
-          user_id: user.id,
-          family_id: null,
-          description: 'Renda mensal (estimativa)',
-          amount: monthlyIncome,
-          type: 'income',
-          category: 'Salário',
-          date: firstDay,
-          recurring: true,
-          frequency: 'monthly',
-          notes: 'Onboarding',
-        });
+      const { data: existingTx } = await supabase.from('transactions').select('id').eq('user_id', user.id).eq('notes', 'Onboarding');
+      if ((existingTx?.length ?? 0) === 0 && incomeSources.length > 0) {
+        for (const src of incomeSources) {
+          if (!src.name?.trim() || src.amount <= 0) continue;
+          const freq = src.frequency === 'weekly' ? 'weekly' : 'monthly';
+          const day = src.dueDay ?? 15;
+          const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(Math.min(day, 28)).padStart(2, '0')}`;
+          await supabase.from('transactions').insert({
+            user_id: user.id,
+            family_id: null,
+            description: src.name.trim(),
+            amount: src.amount,
+            type: 'income',
+            category: 'Salário',
+            date,
+            recurring: true,
+            frequency: freq,
+            notes: 'Onboarding',
+          });
+        }
       }
 
       if (firstGoalName.trim() && firstGoalAmount && Number(firstGoalAmount) > 0) {
@@ -489,7 +559,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
+    <div className={`min-h-screen min-h-[100dvh] flex flex-col bg-background ${shake ? 'animate-shake' : ''}`}>
       <div className="p-4 flex justify-center shrink-0">
         <Logo size="sm" />
       </div>
@@ -506,7 +576,10 @@ export default function OnboardingPage() {
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6 overscroll-contain">
+      <div
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 overscroll-contain touch-pan-y"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.div
@@ -514,7 +587,7 @@ export default function OnboardingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
+              className="space-y-6 max-w-md mx-auto text-center md:text-left"
             >
               <h2 className="text-xl font-bold text-foreground text-center">
                 Olá! Primeiro, vamos nos apresentar 👋
@@ -530,11 +603,9 @@ export default function OnboardingPage() {
               />
               <div>
                 <label className="text-sm text-muted-foreground mb-1 block">Data de nascimento</label>
-                <Input
-                  type="date"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  className="bg-muted border-border"
+                <DateScrollPicker
+                  value={birthDate ? new Date(birthDate + 'T12:00:00') : new Date(1990, 0, 1)}
+                  onChange={(d) => setBirthDate(d.toISOString().split('T')[0])}
                 />
               </div>
             </motion.div>
@@ -546,7 +617,7 @@ export default function OnboardingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
+              className="space-y-6 max-w-md mx-auto"
             >
               <h2 className="text-xl font-bold text-foreground text-center">
                 Um pouco mais sobre você
@@ -598,7 +669,7 @@ export default function OnboardingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
+              className="space-y-6 max-w-md mx-auto"
             >
               <h2 className="text-xl font-bold text-foreground text-center">
                 Sua situação financeira atual
@@ -682,7 +753,7 @@ export default function OnboardingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
+              className="space-y-4 max-w-md mx-auto"
             >
               <h2 className="text-xl font-bold text-foreground text-center">
                 Seus gastos fixos mensais
@@ -743,7 +814,89 @@ export default function OnboardingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
+              className="space-y-4 max-w-md mx-auto"
+            >
+              <h2 className="text-xl font-bold text-foreground text-center">
+                Quais são suas fontes de renda hoje?
+              </h2>
+              <p className="text-sm text-muted-foreground text-center">
+                Adicione todas as formas que você recebe dinheiro atualmente
+              </p>
+              {incomeSources.length < 6 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIncomeSources((p) => [...p, { name: '', amount: 0, frequency: 'monthly', dueDay: 15 }])}
+                  className="w-full border-border"
+                >
+                  <Plus size={16} className="mr-2" /> Adicionar fonte de renda
+                </Button>
+              )}
+              {incomeSources.map((s, i) => (
+                <div key={i} className="bg-card border border-border rounded-xl p-4 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Fonte {i + 1}</span>
+                    <button type="button" onClick={() => setIncomeSources((p) => p.filter((_, j) => j !== i))} className="text-destructive">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <select
+                    value={s.name}
+                    onChange={(e) => setIncomeSources((p) => { const n = [...p]; n[i] = { ...n[i], name: e.target.value }; return n; })}
+                    className="w-full p-2 rounded-lg border border-border bg-muted text-foreground text-sm"
+                  >
+                    <option value="">Selecione ou digite abaixo</option>
+                    {INCOME_SOURCE_SUGGESTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                  {!INCOME_SOURCE_SUGGESTIONS.includes(s.name) && (
+                    <Input
+                      placeholder="Nome da fonte"
+                      value={s.name}
+                      onChange={(e) => setIncomeSources((p) => { const n = [...p]; n[i] = { ...n[i], name: e.target.value }; return n; })}
+                      className="bg-muted border-border"
+                    />
+                  )}
+                  <Input
+                    type="number"
+                    placeholder="Valor mensal estimado (R$)"
+                    value={s.amount || ''}
+                    onChange={(e) => setIncomeSources((p) => { const n = [...p]; n[i] = { ...n[i], amount: Number(e.target.value) || 0 }; return n; })}
+                    className="bg-muted border-border"
+                  />
+                  <select
+                    value={s.frequency}
+                    onChange={(e) => setIncomeSources((p) => { const n = [...p]; n[i] = { ...n[i], frequency: e.target.value }; return n; })}
+                    className="w-full p-2 rounded-lg border border-border bg-muted text-foreground text-sm"
+                  >
+                    {INCOME_FREQUENCY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  {s.frequency === 'monthly' && (
+                    <select
+                      value={s.dueDay ?? 15}
+                      onChange={(e) => setIncomeSources((p) => { const n = [...p]; n[i] = { ...n[i], dueDay: Number(e.target.value) }; return n; })}
+                      className="w-full p-2 rounded-lg border border-border bg-muted text-foreground text-sm"
+                    >
+                      {Array.from({ length: 31 }, (_, d) => d + 1).map((d) => (
+                        <option key={d} value={d}>Dia {d}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              ))}
+            </motion.div>
+          )}
+
+          {step === 5 && (
+            <motion.div
+              key="step5"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-4 max-w-md mx-auto"
             >
               <h2 className="text-xl font-bold text-foreground text-center">
                 Suas dívidas atuais
@@ -809,13 +962,13 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <motion.div
-              key="step5"
+              key="step6"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
+              className="space-y-4 max-w-md mx-auto"
             >
               <h2 className="text-xl font-bold text-foreground text-center">
                 Seus objetivos financeiros
@@ -903,13 +1056,13 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <motion.div
-              key="step6"
+              key="step7"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
+              className="space-y-4 max-w-md mx-auto"
             >
               <h2 className="text-xl font-bold text-foreground text-center">
                 Seu perfil financeiro
@@ -974,13 +1127,50 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {step === 7 && (
+          {step === 8 && (
             <motion.div
-              key="step7"
+              key="step8"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
+              className="space-y-4 max-w-md mx-auto"
+            >
+              <h2 className="text-xl font-bold text-foreground text-center">
+                Quais são suas habilidades hoje?
+              </h2>
+              <p className="text-sm text-muted-foreground text-center">
+                Isso nos ajuda a personalizar sugestões para aumentar sua renda
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {SKILL_CATEGORIES.flatMap((c) => c.skills.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSkillsSelected((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]))}
+                    className={`px-3 py-2 rounded-lg text-sm ${
+                      skillsSelected.includes(s) ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                )))}
+              </div>
+              <Input
+                placeholder="Alguma outra habilidade?"
+                value={skillsCustom}
+                onChange={(e) => setSkillsCustom(e.target.value)}
+                className="bg-muted border-border"
+              />
+            </motion.div>
+          )}
+
+          {step === 9 && (
+            <motion.div
+              key="step9"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-4 max-w-md mx-auto"
             >
               <h2 className="text-xl font-bold text-foreground text-center">
                 Quase lá! Sua primeira meta 🎯

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -40,6 +40,7 @@ function LoadingScreen() {
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { profileComplete, profile, loading: profileLoading } = useAuthState();
+  const { search } = useLocation();
   const [loadingOverride, setLoadingOverride] = useState(false);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -67,7 +68,8 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const loading = rawLoading && !loadingOverride;
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
-  if (profileComplete) return <Navigate to="/dashboard" replace />;
+  const isRefazer = search.includes('refazer=1');
+  if (profileComplete && !isRefazer) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 

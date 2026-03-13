@@ -30,7 +30,7 @@ export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const { profile, refetchProfile } = useAuthState();
   const { resetAndStartTour } = useAppTour();
-  const { isPro } = usePlan();
+  const { isPro, planType, planExpiresAt } = usePlan();
   const { preferences: alertPrefs, updatePreferences: updateAlertPrefs } = useAlerts();
   const { connections, getBankLimit } = useBankConnections(user?.id);
   const { unlocked } = useAchievements(user?.id);
@@ -90,11 +90,28 @@ export default function ProfilePage() {
   const displayName = profile?.name?.trim() || user?.email?.split('@')[0] || 'Usuário';
   const initial = (profile?.name || user?.email || 'U').charAt(0).toUpperCase();
 
+  const planBadge =
+    planType === 'pro'
+      ? planExpiresAt && planExpiresAt <= new Date()
+        ? { label: 'Expirado', className: 'bg-destructive/20 text-destructive' }
+        : { label: '✨ Pro', className: 'bg-amber-500/20 text-amber-600 dark:text-amber-400' }
+      : { label: 'Free', className: 'bg-muted text-muted-foreground' };
+
   return (
     <div className="space-y-6 pb-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-bold text-foreground">Perfil & Configurações</h1>
-        <AICreditsBar />
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${planBadge.className}`}>
+            {planBadge.label}
+          </span>
+          {planType === 'pro' && planExpiresAt && planExpiresAt > new Date() && (
+            <span className="text-xs text-muted-foreground">
+              Válido até {planExpiresAt.toLocaleDateString('pt-BR')}
+            </span>
+          )}
+          <AICreditsBar />
+        </div>
       </div>
 
       {profile && (
@@ -131,7 +148,22 @@ export default function ProfilePage() {
             {profile.main_goal && (
               <div><span className="text-muted-foreground">Principal objetivo:</span> {profile.main_goal}</div>
             )}
+            {(profile as { skills?: { selected?: string[] } }).skills?.selected?.length ? (
+              <div className="col-span-full">
+                <span className="text-muted-foreground">Habilidades:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {((profile as { skills?: { selected?: string[] } }).skills?.selected ?? []).map((s) => (
+                    <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
+          <Button variant="outline" size="sm" className="mt-2 border-border" onClick={() => navigate('/onboarding?refazer=1')}>
+            Refazer questionário
+          </Button>
         </motion.div>
       )}
 
@@ -253,7 +285,7 @@ export default function ProfilePage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-card border border-border rounded-xl p-4 shadow-card">
           <p className="text-sm font-semibold text-foreground mb-2">Pro Mensal</p>
-          <p className="text-xl font-bold text-foreground">R$ 47<span className="text-xs font-normal text-muted-foreground">/mês</span></p>
+          <p className="text-xl font-bold text-foreground">R$ 47/mês</p>
           <ul className="space-y-1 text-xs text-muted-foreground mt-2">
             <li>• Créditos de IA ilimitados</li>
             <li>• Lançamentos ilimitados</li>
@@ -270,10 +302,10 @@ export default function ProfilePage() {
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
           className="bg-card border border-border rounded-xl p-4 shadow-card">
-          <span className="text-xs font-semibold text-primary">Economize R$85</span>
+          <span className="text-xs font-semibold text-primary">Economize R$ 85</span>
           <p className="text-sm font-semibold text-foreground mt-1">Pro Semestral</p>
-          <p className="text-xl font-bold text-foreground">R$ 197 <span className="text-xs font-normal text-muted-foreground">/ 6 meses</span></p>
-          <p className="text-xs text-muted-foreground">Equivale a R$ 32,83/mês</p>
+          <p className="text-xl font-bold text-foreground">6x R$ 32,83</p>
+          <p className="text-xs text-muted-foreground">ou R$ 197 à vista</p>
           <ul className="space-y-1 text-xs text-muted-foreground mt-2">
             <li>• Todos os benefícios do Pro Mensal</li>
           </ul>
@@ -284,11 +316,11 @@ export default function ProfilePage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
           className="bg-gradient-ai rounded-xl p-4 shadow-card relative overflow-hidden">
           <div className="absolute top-2 right-2 bg-warning/20 text-warning text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-            <Crown size={10} /> Mais popular — Economize R$267
+            <Crown size={10} /> Economize R$ 267 🔥 Mais popular
           </div>
           <p className="text-sm font-semibold text-secondary-foreground mb-1">Pro Anual</p>
-          <p className="text-2xl font-bold text-secondary-foreground">R$ 297<span className="text-xs font-normal">/ano</span></p>
-          <p className="text-xs text-secondary-foreground/80">12x de R$ 24,75</p>
+          <p className="text-2xl font-bold text-secondary-foreground">12x R$ 24,75</p>
+          <p className="text-xs text-secondary-foreground/80">ou R$ 297 à vista</p>
           <ul className="space-y-1 text-xs text-secondary-foreground/80 mt-2">
             <li>• Todos os benefícios do Pro Mensal</li>
             <li>• Acesso antecipado a novas funcionalidades</li>
