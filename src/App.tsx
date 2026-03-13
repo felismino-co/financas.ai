@@ -21,6 +21,7 @@ import EducationPage from "./pages/EducationPage";
 import BillsPage from "./pages/BillsPage";
 import ReceivablesPage from "./pages/ReceivablesPage";
 import BanksPage from "./pages/BanksPage";
+import FinancialProfilePage from "./pages/FinancialProfilePage";
 import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
 
@@ -193,6 +194,7 @@ function AppRoutes() {
       <Route path="/onboarding" element={<OnboardingGuard><OnboardingPage /></OnboardingGuard>} />
       <Route element={<AppGuard><AppLayout /></AppGuard>}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/financial-profile" element={<FinancialProfilePage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/budget" element={<BudgetPage />} />
         <Route path="/goals" element={<GoalsPage />} />

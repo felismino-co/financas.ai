@@ -1,20 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthState } from '@/contexts/AuthStateContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { MessageCircle, Check, Loader2 } from 'lucide-react';
 
+const DEFAULT_PREFS = {
+  whatsapp_7days: true,
+  whatsapp_3days: true,
+  whatsapp_due_day: true,
+  whatsapp_receivables: true,
+  whatsapp_weekly_summary: true,
+  whatsapp_daily_reminder: false,
+  whatsapp_weekly_tip: true,
+};
+
+const PREF_LABELS: Record<keyof typeof DEFAULT_PREFS, string> = {
+  whatsapp_7days: 'Lembrete 7 dias antes de contas',
+  whatsapp_3days: 'Lembrete 3 dias antes de contas',
+  whatsapp_due_day: 'Lembrete no dia do vencimento',
+  whatsapp_receivables: 'Avisos de recebimento',
+  whatsapp_weekly_summary: 'Resumo semanal (segunda 8h)',
+  whatsapp_daily_reminder: 'Lembrete diário noturno (21h)',
+  whatsapp_weekly_tip: 'Dica semanal personalizada',
+};
+
 const COMANDOS = [
-  'gastei 50 no mercado',
-  'despesa 120 combustível',
+  'gastei 45 no almoço',
   'recebi 3000 salário',
-  'paguei 80 luz',
-  'almoço 35',
+  'paguei [nome da conta]',
+  'recebi [descrição]',
   'saldo',
+  'contas',
+  'a receber',
   'resumo',
+  'metas',
   'ajuda',
+  'dica',
 ];
 
 export function WhatsAppConnect() {
@@ -23,8 +47,20 @@ export function WhatsAppConnect() {
   const [phone, setPhone] = useState(profile?.phone_number ?? '');
   const [loading, setLoading] = useState(false);
   const [showComandos, setShowComandos] = useState(false);
+  const [prefs, setPrefs] = useState<Record<string, boolean>>(DEFAULT_PREFS);
 
   const connected = profile?.whatsapp_connected ?? false;
+
+  useEffect(() => {
+    if (profile?.phone_number) setPhone(profile.phone_number);
+  }, [profile?.phone_number]);
+
+  useEffect(() => {
+    const wp = profile?.whatsapp_preferences as Record<string, boolean> | undefined;
+    if (wp && typeof wp === 'object') {
+      setPrefs((prev) => ({ ...DEFAULT_PREFS, ...prev, ...wp }));
+    }
+  }, [profile?.whatsapp_preferences]);
 
   const handleConnect = async () => {
     if (!user?.id) return;
@@ -40,17 +76,41 @@ export function WhatsAppConnect() {
     }
   };
 
+  const handlePrefChange = async (key: string, value: boolean) => {
+    if (!user?.id) return;
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    try {
+      await supabase.from('profiles').update({ whatsapp_preferences: next }).eq('id', user.id);
+      await refetchProfile();
+    } catch {
+      setPrefs(prefs);
+    }
+  };
+
   return (
     <div className="bg-card border border-border rounded-xl p-4 shadow-card space-y-3">
       <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
         <MessageCircle size={18} /> WhatsApp
       </h3>
       {connected ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <p className="text-sm text-success flex items-center gap-2">
             <Check size={16} /> Conectado
           </p>
           <p className="text-xs text-muted-foreground">Envie mensagens para registrar gastos e receitas.</p>
+          <div className="border-t border-border pt-3 space-y-2">
+            <p className="text-xs font-medium text-foreground">Preferências de notificação</p>
+            {(Object.keys(DEFAULT_PREFS) as (keyof typeof DEFAULT_PREFS)[]).map((key) => (
+              <div key={key} className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">{PREF_LABELS[key]}</span>
+                <Switch
+                  checked={prefs[key] ?? DEFAULT_PREFS[key]}
+                  onCheckedChange={(v) => handlePrefChange(key, v)}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -67,7 +127,7 @@ export function WhatsAppConnect() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Adicione o número do bot como contato e envie <strong>ajuda</strong> para começar.
+            Adicione o número do bot como contato e envie <strong>conectar</strong> para vincular.
           </p>
         </div>
       )}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getErrorMessage, getFriendlyError } from '@/lib/supabase-error';
-import type { Bill } from '@/types/database';
+import type { Bill, BillType, BillNote } from '@/types/database';
 
 export interface BillApp {
   id: string;
@@ -15,6 +15,17 @@ export interface BillApp {
   paid_at?: string | null;
   installments?: number;
   paid_installments?: number;
+  bill_type?: BillType;
+  installment_current?: number;
+  installment_total?: number;
+  notes_history?: BillNote[];
+  tags?: string[];
+  card_limit?: number | null;
+  card_closing_day?: number | null;
+  creditor_name?: string | null;
+  total_amount?: number | null;
+  paid_amount?: number | null;
+  status?: string;
 }
 
 function toApp(b: Bill): BillApp {
@@ -30,6 +41,17 @@ function toApp(b: Bill): BillApp {
     paid_at: b.paid_at,
     installments: b.installments ?? 1,
     paid_installments: b.paid_installments ?? 0,
+    bill_type: b.bill_type as BillType | undefined,
+    installment_current: b.installment_current ?? 1,
+    installment_total: b.installment_total ?? 1,
+    notes_history: (b.notes_history as BillNote[]) ?? [],
+    tags: b.tags ?? [],
+    card_limit: b.card_limit,
+    card_closing_day: b.card_closing_day,
+    creditor_name: b.creditor_name,
+    total_amount: b.total_amount != null ? Number(b.total_amount) : null,
+    paid_amount: b.paid_amount != null ? Number(b.paid_amount) : null,
+    status: b.status,
   };
 }
 
@@ -69,7 +91,7 @@ export function useBills(userId: string | undefined, familyId: string | null | u
     fetch();
   }, [fetch]);
 
-  const addBill = async (data: Omit<BillApp, 'id'>) => {
+  const addBill = async (data: Partial<BillApp> & Pick<BillApp, 'description' | 'amount' | 'due_day' | 'type'>) => {
     if (!userId) throw new Error('Usuário não autenticado');
     setError(null);
     const payload: Record<string, unknown> = {
@@ -81,8 +103,17 @@ export function useBills(userId: string | undefined, familyId: string | null | u
       type: data.type,
       category: data.category ?? null,
       is_recurring: data.is_recurring ?? true,
+      bill_type: data.bill_type ?? 'fixed',
+      installment_current: data.installment_current ?? 1,
+      installment_total: data.installment_total ?? 1,
+      is_variable: data.bill_type === 'variable' || data.is_variable,
     };
-    if (data.is_variable !== undefined) payload.is_variable = data.is_variable;
+    if (data.card_limit != null) payload.card_limit = data.card_limit;
+    if (data.card_closing_day != null) payload.card_closing_day = data.card_closing_day;
+    if (data.creditor_name != null) payload.creditor_name = data.creditor_name;
+    if (data.total_amount != null) payload.total_amount = data.total_amount;
+    if (data.paid_amount != null) payload.paid_amount = data.paid_amount;
+    if (data.tags?.length) payload.tags = data.tags;
     const { error: e } = await supabase.from('bills').insert(payload);
     if (e) throw e;
     await fetch();
@@ -101,6 +132,17 @@ export function useBills(userId: string | undefined, familyId: string | null | u
     if (data.paid_at !== undefined) payload.paid_at = data.paid_at;
     if (data.installments !== undefined) payload.installments = data.installments;
     if (data.paid_installments !== undefined) payload.paid_installments = data.paid_installments;
+    if (data.bill_type !== undefined) payload.bill_type = data.bill_type;
+    if (data.installment_current !== undefined) payload.installment_current = data.installment_current;
+    if (data.installment_total !== undefined) payload.installment_total = data.installment_total;
+    if (data.notes_history !== undefined) payload.notes_history = data.notes_history;
+    if (data.tags !== undefined) payload.tags = data.tags;
+    if (data.card_limit !== undefined) payload.card_limit = data.card_limit;
+    if (data.card_closing_day !== undefined) payload.card_closing_day = data.card_closing_day;
+    if (data.creditor_name !== undefined) payload.creditor_name = data.creditor_name;
+    if (data.total_amount !== undefined) payload.total_amount = data.total_amount;
+    if (data.paid_amount !== undefined) payload.paid_amount = data.paid_amount;
+    if (data.status !== undefined) payload.status = data.status;
     const { error: e } = await supabase.from('bills').update(payload).eq('id', id);
     if (e) throw e;
     await fetch();
@@ -110,12 +152,14 @@ export function useBills(userId: string | undefined, familyId: string | null | u
     setError(null);
     const bill = bills.find((b) => b.id === id);
     if (!bill) return;
-    const installments = bill.installments ?? 1;
-    const paid = (bill.paid_installments ?? 0) + 1;
+    const total = bill.installment_total ?? bill.installments ?? 1;
+    const current = bill.installment_current ?? bill.paid_installments ?? 0;
+    const nextCurrent = current + 1;
+    const isLast = nextCurrent >= total;
     const payload: Record<string, unknown> =
-      installments > 1 && paid < installments
-        ? { paid_installments: paid }
-        : { paid_at: new Date().toISOString(), paid_installments: installments };
+      total > 1 && !isLast
+        ? { installment_current: nextCurrent, paid_installments: nextCurrent }
+        : { paid_at: new Date().toISOString(), paid_installments: total, installment_current: total, status: 'paid' };
     const { error: e } = await supabase.from('bills').update(payload).eq('id', id);
     if (e) throw e;
     await fetch();

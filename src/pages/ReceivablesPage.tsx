@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, Check, Wallet } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, Wallet, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,24 +13,33 @@ import {
 } from '@/components/ui/dialog';
 import { useReceivables, type Receivable } from '@/hooks/useReceivables';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ReceivableNotesSheet } from '@/components/receivables/ReceivableNotesSheet';
 import { toast } from 'sonner';
 import { CurrencyInput, parseCurrencyInput } from '@/components/CurrencyInput';
 import { RECEIVABLES_CATEGORIES } from '@/data/receivables-categories';
+import { RECEIVABLE_TYPES } from '@/data/receivable-types';
+import { celebrateProgress } from '@/lib/confetti';
 
 export default function ReceivablesPage() {
   const { receivables, loading, error, addReceivable, updateReceivable, markAsReceived, deleteReceivable } = useReceivables();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [notesId, setNotesId] = useState<string | null>(null);
   const [form, setForm] = useState({
     description: '',
     amountDisplay: '',
     due_date: '',
     frequency: 'once' as 'once' | 'monthly' | 'recurring',
+    receivable_type: 'recurring' as string,
     installments: 1,
     installmentValueDisplay: '',
     category: RECEIVABLES_CATEGORIES[0],
     notes: '',
+    debtor_name: '',
+    client_name: '',
+    contract_end_date: '',
+    service_description: '',
   });
 
   const pending = receivables.filter((r) => r.status === 'pending');
@@ -78,10 +87,15 @@ export default function ReceivablesPage() {
       amountDisplay: '',
       due_date: '',
       frequency: 'once',
+      receivable_type: 'recurring',
       installments: 1,
       installmentValueDisplay: '',
       category: RECEIVABLES_CATEGORIES[0],
       notes: '',
+      debtor_name: '',
+      client_name: '',
+      contract_end_date: '',
+      service_description: '',
     });
     setEditingId(null);
   };
@@ -97,10 +111,15 @@ export default function ReceivablesPage() {
       amountDisplay: r.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       due_date: r.due_date || '',
       frequency: r.frequency,
-      installments: r.installments,
+      receivable_type: r.receivable_type || 'recurring',
+      installments: r.installment_total ?? r.installments,
       installmentValueDisplay: r.installment_value ? r.installment_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '',
       category: (r.category as typeof RECEIVABLES_CATEGORIES[number]) || RECEIVABLES_CATEGORIES[0],
       notes: r.notes || '',
+      debtor_name: r.debtor_name || '',
+      client_name: r.client_name || '',
+      contract_end_date: r.contract_end_date || '',
+      service_description: r.service_description || '',
     });
     setEditingId(r.id);
     setModalOpen(true);
@@ -112,21 +131,28 @@ export default function ReceivablesPage() {
       toast.error('Informe a descrição.');
       return;
     }
-    if (amount <= 0) {
+    if (amount <= 0 && form.receivable_type !== 'custom') {
       toast.error('Informe um valor válido.');
       return;
     }
     try {
       const payload = {
         description: form.description.trim(),
-        amount,
+        amount: form.installments > 1 ? (parseCurrencyInput(form.installmentValueDisplay || '0') || amount / form.installments) : amount,
         due_date: form.due_date || null,
         frequency: form.frequency,
+        receivable_type: form.receivable_type,
         installments: form.installments,
-        installment_value: form.installments > 1 ? parseCurrencyInput(form.installmentValueDisplay || '0') : null,
+        installment_total: form.installments,
+        installment_value: form.installments > 1 ? (parseCurrencyInput(form.installmentValueDisplay || '0') || amount / form.installments) : null,
+        total_amount: form.installments > 1 ? amount : null,
         category: form.category,
         notes: form.notes.trim() || null,
         status: 'pending' as const,
+        debtor_name: form.debtor_name.trim() || null,
+        client_name: form.client_name.trim() || null,
+        contract_end_date: form.contract_end_date || null,
+        service_description: form.service_description.trim() || null,
       };
       if (editingId) {
         await updateReceivable(editingId, payload);
@@ -205,11 +231,19 @@ export default function ReceivablesPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-foreground">{r.description}</p>
+                    {RECEIVABLE_TYPES.find((t) => t.value === r.receivable_type) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        {RECEIVABLE_TYPES.find((t) => t.value === r.receivable_type)!.icon} {RECEIVABLE_TYPES.find((t) => t.value === r.receivable_type)!.label}
+                      </span>
+                    )}
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${badge.color}`}>{badge.label}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {r.category || '—'}
                     {r.due_date && ` • ${new Date(r.due_date + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+                    {(r.installment_total ?? r.installments) > 1 && !isReceived && (
+                      <span className="ml-1"> • Parcela {(r.installment_current ?? 0) + 1}/{r.installment_total ?? r.installments}</span>
+                    )}
                     {days !== null && !isReceived && (
                       <span className={`ml-1 font-medium ${getCountdownColor(days)}`}>
                         {days < 0 ? `Atrasado ${Math.abs(days)} dias` : days === 0 ? 'Hoje!' : `Faltam ${days} dias`}
@@ -222,9 +256,22 @@ export default function ReceivablesPage() {
                     R$ {r.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                   {!isReceived && (
-                    <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => markAsReceived(r.id)}>
-                      <Check size={14} className="mr-1" /> Recebido
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" className="h-8 px-2" onClick={async () => {
+                        await markAsReceived(r.id);
+                        const total = r.installment_total ?? r.installments ?? 1;
+                        const current = r.installment_current ?? 0;
+                        if (current + 1 >= total) {
+                          celebrateProgress(100);
+                          toast.success('🎉 Recebimento confirmado!');
+                        }
+                      }}>
+                        <Check size={14} className="mr-1" /> Recebido
+                      </Button>
+                      <button type="button" onClick={() => setNotesId(r.id)} className="p-1.5 rounded hover:bg-muted text-muted-foreground" title="Anotações">
+                        <StickyNote size={14} />
+                      </button>
+                    </>
                   )}
                   <button type="button" onClick={() => handleOpenEdit(r)} className="p-1.5 rounded hover:bg-muted text-muted-foreground">
                     <Pencil size={14} />
@@ -248,6 +295,24 @@ export default function ReceivablesPage() {
         onConfirm={confirmDelete}
       />
 
+      {notesId && (() => {
+        const r = receivables.find((x) => x.id === notesId);
+        return r ? (
+          <ReceivableNotesSheet
+            open={!!notesId}
+            onOpenChange={(o) => !o && setNotesId(null)}
+            description={r.description}
+            amount={r.amount}
+            notes={r.notes_history ?? []}
+            tags={r.tags ?? []}
+            onSave={async (notes, tags) => {
+              await updateReceivable(notesId, { notes_history: notes, tags });
+              setNotesId(null);
+            }}
+          />
+        ) : null;
+      })()}
+
       <Dialog open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) resetForm(); }}>
         <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
@@ -256,14 +321,73 @@ export default function ReceivablesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
+              <label className="text-sm text-foreground">Tipo de recebimento</label>
+              <div className="grid grid-cols-2 gap-2 mt-2 max-h-32 overflow-y-auto">
+                {RECEIVABLE_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, receivable_type: t.value }))}
+                    className={`p-2 rounded border text-left text-xs ${
+                      form.receivable_type === t.value ? 'border-primary bg-primary/10' : 'border-border bg-muted'
+                    }`}
+                  >
+                    <span className="font-medium">{t.icon} {t.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
               <label className="text-sm text-foreground">Descrição</label>
               <Input
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Ex: Salário, Venda de produto"
+                placeholder={form.receivable_type === 'debt' ? 'Ex: João me deve' : form.receivable_type === 'client' ? 'Ex: Empresa XYZ' : 'Ex: Salário, Venda'}
                 className="mt-1 bg-muted border-border"
               />
             </div>
+            {form.receivable_type === 'debt' && (
+              <div>
+                <label className="text-sm text-foreground">Nome da pessoa</label>
+                <Input
+                  value={form.debtor_name}
+                  onChange={(e) => setForm((f) => ({ ...f, debtor_name: e.target.value }))}
+                  placeholder="Quem te deve"
+                  className="mt-1 bg-muted border-border"
+                />
+              </div>
+            )}
+            {form.receivable_type === 'client' && (
+              <>
+                <div>
+                  <label className="text-sm text-foreground">Nome do cliente</label>
+                  <Input
+                    value={form.client_name}
+                    onChange={(e) => setForm((f) => ({ ...f, client_name: e.target.value }))}
+                    placeholder="Cliente"
+                    className="mt-1 bg-muted border-border"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-foreground">Data fim do contrato</label>
+                  <Input
+                    type="date"
+                    value={form.contract_end_date}
+                    onChange={(e) => setForm((f) => ({ ...f, contract_end_date: e.target.value }))}
+                    className="mt-1 bg-muted border-border"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-foreground">Descrição do serviço</label>
+                  <Input
+                    value={form.service_description}
+                    onChange={(e) => setForm((f) => ({ ...f, service_description: e.target.value }))}
+                    placeholder="Ex: Consultoria mensal"
+                    className="mt-1 bg-muted border-border"
+                  />
+                </div>
+              </>
+            )}
             <div>
               <label className="text-sm text-foreground">Categoria</label>
               <select

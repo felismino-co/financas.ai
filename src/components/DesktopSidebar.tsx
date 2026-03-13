@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, ArrowLeftRight, PieChart, Target, User, BarChart3, Sparkles, FileText, BookOpen, Building2, Wallet } from 'lucide-react';
+import { Home, ArrowLeftRight, PieChart, Target, User, BarChart3, Sparkles, FileText, BookOpen, Building2, Wallet, LineChart } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 
 const items = [
   { path: '/dashboard', icon: Home, label: 'Início' },
+  { path: '/financial-profile', icon: LineChart, label: 'Meu Perfil Financeiro' },
   { path: '/transactions', icon: ArrowLeftRight, label: 'Transações' },
   { path: '/budget', icon: PieChart, label: 'Orçamento' },
   { path: '/goals', icon: Target, label: 'Metas' },

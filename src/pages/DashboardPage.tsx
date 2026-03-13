@@ -21,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { startOfMonth, endOfMonth, subMonths, format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useBankConnections } from '@/hooks/useBankConnections';
+import { WeeklyChallenges } from '@/components/WeeklyChallenges';
 
 const card = (i: number) => ({ initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay: i * 0.1 } });
 
@@ -87,6 +88,11 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground">Aqui está seu resumo financeiro</p>
         </div>
         <div className="flex items-center gap-3">
+          {(profile?.streak_days ?? 0) > 0 && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/20 text-warning text-xs font-medium" title="Sequência de dias">
+              {(profile?.streak_days ?? 0) >= 7 ? '🔥' : '📅'} {profile?.streak_days} dias
+            </div>
+          )}
           <FamilyMode userId={userId} viewMode={viewMode} onViewModeChange={setViewMode} />
           <NotificationsDropdown />
           <div data-tour="profile-avatar" className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm overflow-hidden">
@@ -132,6 +138,8 @@ export default function DashboardPage() {
           ))
         )}
       </div>
+
+      {!loading && <WeeklyChallenges />}
 
       {!loading && connections.length > 0 && (
         <motion.div

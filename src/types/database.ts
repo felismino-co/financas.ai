@@ -43,18 +43,38 @@ export interface Profile {
   email_bills_reminder?: boolean;
   phone_number?: string | null;
   whatsapp_connected?: boolean;
+  whatsapp_preferences?: {
+    whatsapp_7days?: boolean;
+    whatsapp_3days?: boolean;
+    whatsapp_due_day?: boolean;
+    whatsapp_receivables?: boolean;
+    whatsapp_weekly_summary?: boolean;
+    whatsapp_daily_reminder?: boolean;
+    whatsapp_weekly_tip?: boolean;
+  };
   preferences?: {
     budget_alert?: boolean;
     weekly_report?: boolean;
     goal_achieved?: boolean;
     monthly_plan?: boolean;
+    theme?: { id?: string; customPrimary?: string };
   };
+  theme_config?: Record<string, unknown>;
   score?: number;
   score_level?: string;
   streak_days?: number;
   last_activity_date?: string | null;
   skills?: { selected?: string[]; custom?: string };
   income_sources?: Array<{ name: string; amount: number; frequency: string; dueDay?: number }>;
+}
+
+export type BillType = 'fixed' | 'installment' | 'credit_card' | 'variable' | 'informal';
+export type BillStatus = 'pending' | 'paid' | 'overdue' | 'inactive';
+
+export interface BillNote {
+  text: string;
+  tags: string[];
+  created_at: string;
 }
 
 export interface Bill {
@@ -73,6 +93,17 @@ export interface Bill {
   paid_installments?: number;
   source?: 'manual' | 'onboarding';
   created_at: string;
+  bill_type?: BillType;
+  installment_current?: number;
+  installment_total?: number;
+  notes_history?: BillNote[];
+  tags?: string[];
+  card_limit?: number | null;
+  card_closing_day?: number | null;
+  creditor_name?: string | null;
+  total_amount?: number | null;
+  paid_amount?: number | null;
+  status?: BillStatus;
 }
 
 export interface Transaction {

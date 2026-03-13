@@ -15,6 +15,7 @@ import { usePlan } from '@/hooks/usePlan';
 import { useAlerts } from '@/hooks/useAlerts';
 import { useBankConnections } from '@/hooks/useBankConnections';
 import { WhatsAppConnect } from '@/components/WhatsAppConnect';
+import { ThemeCustomizer } from '@/components/ThemeCustomizer';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useAchievements } from '@/hooks/useAchievements';
@@ -352,6 +353,7 @@ export default function ProfilePage() {
           </div>
         ))}
         <WhatsAppConnect />
+        <ThemeCustomizer />
         <div className="flex items-center justify-between">
           <span className="text-sm text-foreground">Dia de fechamento</span>
           <Select value={String(preferences.closingDay)} onValueChange={v => setPreferences(prev => ({ ...prev, closingDay: Number(v) }))}>
