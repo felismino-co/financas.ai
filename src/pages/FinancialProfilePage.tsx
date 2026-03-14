@@ -12,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 
 export default function FinancialProfilePage() {
   const { profile } = useAuthState();
-  const { userId } = useViewMode();
+  const { userId, familyId } = useViewMode();
   const { unlocked } = useAchievements(userId);
   const [incomeSources, setIncomeSources] = useState<Array<{ name: string; amount: number; frequency: string }>>([]);
   const [goals, setGoals] = useState<Array<{ name: string; target_amount: number; current_amount: number }>>([]);
@@ -33,12 +33,32 @@ export default function FinancialProfilePage() {
     (async () => {
       setLoading(true);
       try {
+        let txQ = supabase.from('transactions').select('type, amount, date');
+        let goalsQ = supabase.from('goals').select('name, target_amount, current_amount');
+        let recvQ = supabase.from('receivables').select('amount').eq('status', 'pending');
+        let billsQ = supabase.from('bills').select('amount').eq('type', 'expense').is('paid_at', null);
+        let insightsQ = supabase.from('insights').select('title, description').eq('type', 'daily_recommendation').order('created_at', { ascending: false }).limit(3);
+
+        if (familyId) {
+          txQ = txQ.or(`user_id.eq.${userId},family_id.eq.${familyId}`);
+          goalsQ = goalsQ.or(`user_id.eq.${userId},family_id.eq.${familyId}`);
+          recvQ = recvQ.or(`user_id.eq.${userId},family_id.eq.${familyId}`);
+          billsQ = billsQ.or(`user_id.eq.${userId},family_id.eq.${familyId}`);
+          insightsQ = insightsQ.or(`user_id.eq.${userId},family_id.eq.${familyId}`);
+        } else {
+          txQ = txQ.eq('user_id', userId);
+          goalsQ = goalsQ.eq('user_id', userId);
+          recvQ = recvQ.eq('user_id', userId);
+          billsQ = billsQ.eq('user_id', userId);
+          insightsQ = insightsQ.eq('user_id', userId);
+        }
+
         const [txRes, goalsRes, recvRes, billsRes, insightsRes] = await Promise.all([
-          supabase.from('transactions').select('type, amount, date').eq('user_id', userId),
-          supabase.from('goals').select('name, target_amount, current_amount').eq('user_id', userId),
-          supabase.from('receivables').select('amount').eq('user_id', userId).eq('status', 'pending'),
-          supabase.from('bills').select('amount').eq('user_id', userId).eq('type', 'expense').is('paid_at', null),
-          supabase.from('insights').select('title, description').eq('user_id', userId).eq('type', 'daily_recommendation').order('created_at', { ascending: false }).limit(3),
+          txQ,
+          goalsQ,
+          recvQ,
+          billsQ,
+          insightsQ,
         ]);
         if (cancelled) return;
         const tx = (txRes.data || []) as Array<{ type: string; amount: number; date?: string }>;
@@ -60,7 +80,7 @@ export default function FinancialProfilePage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [userId, profile?.income_sources]);
+  }, [userId, familyId, profile?.income_sources]);
 
   const goalsTotal = goals.reduce((s, g) => s + Number(g.current_amount), 0);
   const netWorth = balance + totalReceivables - totalBills + goalsTotal;

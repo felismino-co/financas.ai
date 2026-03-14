@@ -14,26 +14,35 @@ export interface UseDashboardReturn {
   error: string | null;
 }
 
+export interface UseDashboardDateRange {
+  from: string;
+  to: string;
+}
+
 /**
- * Calcula saldo, totais e últimas transações do mês atual.
+ * Calcula saldo, totais e últimas transações do período.
+ * Se dateRange for passado, usa esse intervalo; senão usa o mês atual.
  * Score vem do perfil (financial_score).
  */
 export function useDashboard(
   transactions: TransactionApp[],
   profile: Profile | null,
   loadingTransactions: boolean,
-  loadingProfile: boolean
+  loadingProfile: boolean,
+  dateRange?: UseDashboardDateRange
 ): UseDashboardReturn {
   const now = new Date();
   const monthStart = startOfMonth(now).toISOString().split('T')[0];
   const monthEnd = endOfMonth(now).toISOString().split('T')[0];
+  const rangeStart = dateRange?.from ?? monthStart;
+  const rangeEnd = dateRange?.to ?? monthEnd;
 
   const monthTransactions = useMemo(
     () =>
       transactions.filter(
-        (t) => t.date >= monthStart && t.date <= monthEnd
+        (t) => t.date >= rangeStart && t.date <= rangeEnd
       ),
-    [transactions, monthStart, monthEnd]
+    [transactions, rangeStart, rangeEnd]
   );
 
   const totalIncome = useMemo(

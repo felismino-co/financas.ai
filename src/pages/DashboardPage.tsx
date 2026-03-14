@@ -7,10 +7,10 @@ import { useGoals } from '@/hooks/useGoals';
 import { useBills } from '@/hooks/useBills';
 import { useDashboard } from '@/hooks/useDashboard';
 import { motion } from 'framer-motion';
-import { ArrowRight, TrendingUp, TrendingDown, Target, DollarSign, AlertCircle, BookOpen, Pencil, Building2, RefreshCw } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Target, DollarSign, AlertCircle, BookOpen, Pencil, Building2, RefreshCw, Calendar } from 'lucide-react';
 import { getQuoteOfDay } from '@/lib/quotes';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { categoryIcons } from '@/data/mock-data';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { categoryIcons, pieChartColors } from '@/data/mock-data';
 import { useNavigate } from 'react-router-dom';
 import { NotificationsDropdown } from '@/components/NotificationsDropdown';
 import { HealthScore } from '@/components/HealthScore';
@@ -22,14 +22,37 @@ import { startOfMonth, endOfMonth, subMonths, format, formatDistanceToNow } from
 import { ptBR } from 'date-fns/locale';
 import { useBankConnections } from '@/hooks/useBankConnections';
 import { WeeklyChallenges } from '@/components/WeeklyChallenges';
+import { getRangeForPreset, getMinCustomDate, formatPeriodLabel, type PeriodPreset } from '@/lib/date-range';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { DateScrollPicker } from '@/components/DateScrollPicker';
 
 const card = (i: number) => ({ initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay: i * 0.1 } });
+
+const PERIOD_PRESETS: { key: PeriodPreset; label: string }[] = [
+  { key: 'hoje', label: 'Hoje' },
+  { key: 'semana', label: 'Esta semana' },
+  { key: 'mes', label: 'Este mês' },
+  { key: '3meses', label: '3 meses' },
+  { key: '6meses', label: '6 meses' },
+  { key: '1ano', label: '1 ano' },
+];
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { profile } = useAuthState();
   const { userId, familyId, viewMode, setViewMode } = useViewMode();
-  const { transactions, loading: loadingTransactions } = useTransactions(userId, familyId, {});
+  const [period, setPeriod] = useState<PeriodPreset>('mes');
+  const [customFrom, setCustomFrom] = useState<string>('');
+  const [customTo, setCustomTo] = useState<string>('');
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customFromDate, setCustomFromDate] = useState<Date | null>(null);
+  const [customToDate, setCustomToDate] = useState<Date | null>(null);
+
+  const dateRange = useMemo(() => getRangeForPreset(period, customFrom, customTo), [period, customFrom, customTo]);
+  const txFilters = useMemo(() => ({ dateFrom: dateRange.from, dateTo: dateRange.to }), [dateRange]);
+
+  const { transactions, loading: loadingTransactions } = useTransactions(userId, familyId, txFilters);
   const { connections, syncConnection } = useBankConnections(userId);
   const { goals } = useGoals(userId, familyId);
   const { bills, upcomingDue } = useBills(userId, familyId);
@@ -37,9 +60,31 @@ export default function DashboardPage() {
     transactions,
     profile,
     loadingTransactions,
-    false
+    false,
+    { from: dateRange.from, to: dateRange.to }
   );
   const navigate = useNavigate();
+
+  const minCustomDate = useMemo(() => getMinCustomDate(), []);
+
+  const applyCustomRange = () => {
+    if (customFromDate && customToDate) {
+      const fromStr = customFromDate.toISOString().split('T')[0];
+      const toStr = customToDate.toISOString().split('T')[0];
+      if (customFromDate < minCustomDate) return;
+      const f = customFromDate.getTime();
+      const t = customToDate.getTime();
+      if (f > t) {
+        setCustomFrom(toStr);
+        setCustomTo(fromStr);
+      } else {
+        setCustomFrom(fromStr);
+        setCustomTo(toStr);
+      }
+      setPeriod('custom');
+      setShowCustomModal(false);
+    }
+  };
 
   const mainGoal = goals[0];
   const mainGoalProgress = mainGoal ? Math.round((mainGoal.currentAmount / mainGoal.targetAmount) * 100) : 0;
@@ -51,9 +96,10 @@ export default function DashboardPage() {
   );
   const monthlySobra = (profile?.monthly_income ?? 0) - fixedExpensesTotal;
 
+  const monthsCount = period === 'hoje' || period === 'semana' ? 1 : period === '3meses' ? 3 : period === '6meses' ? 6 : period === '1ano' ? 12 : 6;
   const monthlyHistory = useMemo(() => {
     const now = new Date();
-    return [5, 4, 3, 2, 1, 0].map(offset => {
+    return Array.from({ length: monthsCount }, (_, i) => monthsCount - 1 - i).map(offset => {
       const d = subMonths(now, offset);
       const start = startOfMonth(d).toISOString().split('T')[0];
       const end = endOfMonth(d).toISOString().split('T')[0];
@@ -65,7 +111,17 @@ export default function DashboardPage() {
         income,
         expense,
       };
-    }).reverse();
+    });
+  }, [transactions, monthsCount]);
+
+  const pieData = useMemo(() => {
+    const byCat = transactions
+      .filter(t => t.type === 'expense')
+      .reduce((acc, t) => { acc[t.category] = (acc[t.category] || 0) + t.amount; return acc; }, {} as Record<string, number>);
+    const total = Object.values(byCat).reduce((s, v) => s + v, 0);
+    return Object.entries(byCat)
+      .map(([name, value]) => ({ name, value, pct: total > 0 ? Math.round((value / total) * 100) : 0 }))
+      .sort((a, b) => b.value - a.value);
   }, [transactions]);
 
   const firstName = profile?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'Usuário';
@@ -105,6 +161,41 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+          {PERIOD_PRESETS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => { setPeriod(key); if (key !== 'custom') { setCustomFrom(''); setCustomTo(''); } }}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0 ${
+                period === key && key !== 'custom' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              if (!customFromDate) setCustomFromDate(minCustomDate);
+              if (!customToDate) setCustomToDate(new Date());
+              setShowCustomModal(true);
+            }}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0 flex items-center gap-1 ${
+              period === 'custom' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            <Calendar size={12} /> Personalizado
+          </button>
+        </div>
+        {period === 'custom' && (customFrom || customTo) && (
+          <span className="text-xs text-muted-foreground">
+            {formatPeriodLabel('custom', customFrom, customTo)}
+          </span>
+        )}
+      </div>
+
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
         {loading ? (
           [1, 2, 3, 4].map((i) => (
@@ -112,7 +203,7 @@ export default function DashboardPage() {
           ))
         ) : (
           [
-            { label: 'Saldo do mês', value: balance, icon: <DollarSign size={18} />, color: balance >= 0 ? 'text-success' : 'text-danger' },
+            { label: 'Saldo', value: balance, icon: <DollarSign size={18} />, color: balance >= 0 ? 'text-success' : 'text-danger' },
             { label: 'Receitas', value: totalIncome, icon: <TrendingUp size={18} />, color: 'text-success' },
             { label: 'Despesas', value: totalExpense, icon: <TrendingDown size={18} />, color: 'text-danger' },
             { label: mainGoal?.name || 'Meta', value: `${mainGoalProgress}%`, icon: <Target size={18} />, color: 'text-primary', isPercent: true },
@@ -283,6 +374,45 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
+      {!loading && pieData.length > 0 && (
+        <motion.div {...card(8.5)} className="bg-card border border-border rounded-xl p-4 shadow-card cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate('/transactions')}>
+          <h3 className="font-semibold text-foreground text-sm mb-4">Despesas por Categoria</h3>
+          <div className="h-52">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={3}>
+                  {pieData.map((entry) => (
+                    <Cell key={entry.name} fill={pieChartColors[entry.name] || '#6B7280'} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ background: 'hsl(234 33% 14%)', border: '1px solid hsl(234 20% 20%)', borderRadius: 8, color: '#F8F8F8', fontSize: 12 }}
+                  formatter={(value: number, _: unknown, props: { payload?: { name: string; pct: number }[] }) => {
+                    const p = Array.isArray(props?.payload) ? props.payload[0] : props?.payload;
+                    const pct = p?.pct ?? 0;
+                    const name = p?.name ?? '';
+                    return `${name}: R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${pct}%)`;
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-2 mt-4">
+            {pieData.map((d) => (
+              <div key={d.name} className="flex items-center justify-between text-sm">
+                <span className="text-foreground flex items-center gap-2">
+                  <span className="text-base">{categoryIcons[d.name] || '📦'}</span>
+                  {d.name}
+                </span>
+                <span className="text-muted-foreground">
+                  R$ {d.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} — {d.pct}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {loading ? (
         <Skeleton className="h-64 rounded-xl" />
       ) : (
@@ -351,6 +481,41 @@ export default function DashboardPage() {
         <div data-tour="score-card"><HealthScore score={score} /></div>
         <ScoreProgressCard score={profile?.score ?? 0} />
       </div>
+
+      <Dialog open={showCustomModal} onOpenChange={setShowCustomModal}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Período personalizado</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground mb-2">Disponível apenas últimos 12 meses</p>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-foreground block mb-1">Data início</label>
+              <DateScrollPicker
+                value={customFromDate || minCustomDate}
+                onChange={(d) => setCustomFromDate(d)}
+                minDate={minCustomDate}
+                maxDate={new Date()}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-foreground block mb-1">Data fim</label>
+              <DateScrollPicker
+                value={customToDate || new Date()}
+                onChange={(d) => setCustomToDate(d)}
+                minDate={customFromDate || minCustomDate}
+                maxDate={new Date()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCustomModal(false)}>Cancelar</Button>
+            <Button onClick={applyCustomRange} disabled={!customFromDate || !customToDate || (customFromDate < minCustomDate)}>
+              Aplicar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

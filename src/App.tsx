@@ -15,6 +15,7 @@ import BudgetPage from "./pages/BudgetPage";
 import GoalsPage from "./pages/GoalsPage";
 import InsightsPage from "./pages/InsightsPage";
 import ReportsPage from "./pages/ReportsPage";
+import ComingSoonPage from "./pages/ComingSoonPage";
 import ProfilePage from "./pages/ProfilePage";
 import PricingPage from "./pages/PricingPage";
 import EducationPage from "./pages/EducationPage";
@@ -197,10 +198,10 @@ function AppRoutes() {
         <Route path="/financial-profile" element={<FinancialProfilePage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/budget" element={<BudgetPage />} />
-        <Route path="/goals" element={<GoalsPage />} />
-        <Route path="/insights" element={<InsightsPage />} />
+        <Route path="/goals" element={<ComingSoonPage />} />
+        <Route path="/insights" element={<ComingSoonPage />} />
         <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/education" element={<EducationPage />} />
+        <Route path="/education" element={<ComingSoonPage />} />
         <Route path="/bills" element={<BillsPage />} />
         <Route path="/receivables" element={<ReceivablesPage />} />
         <Route path="/banks" element={<BanksPage />} />

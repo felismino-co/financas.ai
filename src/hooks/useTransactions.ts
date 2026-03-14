@@ -41,6 +41,8 @@ function toApp(t: DbTransaction): TransactionApp {
 export interface UseTransactionsFilters {
   month?: number;
   year?: number;
+  dateFrom?: string;
+  dateTo?: string;
   category?: string;
   type?: 'income' | 'expense' | 'all';
   source?: 'all' | 'manual' | 'pluggy';
@@ -84,7 +86,9 @@ export function useTransactions(
         q = q.eq('user_id', userId);
       }
 
-      if (filters.month != null && filters.year != null) {
+      if (filters.dateFrom && filters.dateTo) {
+        q = q.gte('date', filters.dateFrom).lte('date', filters.dateTo);
+      } else if (filters.month != null && filters.year != null) {
         const start = new Date(filters.year, filters.month - 1, 1).toISOString().split('T')[0];
         const end = new Date(filters.year, filters.month, 0).toISOString().split('T')[0];
         q = q.gte('date', start).lte('date', end);
@@ -109,7 +113,7 @@ export function useTransactions(
     } finally {
       setLoading(false);
     }
-  }, [userId, familyId, filters.month, filters.year, filters.category, filters.type, filters.source]);
+  }, [userId, familyId, filters.month, filters.year, filters.dateFrom, filters.dateTo, filters.category, filters.type, filters.source]);
 
   useEffect(() => {
     fetch();

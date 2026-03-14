@@ -99,6 +99,20 @@ export const categoryColors: Record<string, string> = {
   'Salário': '#00D4AA', 'Freelance': '#7C3AED', 'Investimentos': '#F39C12', 'Presente': '#E74C3C',
 };
 
+/** Cores fixas para gráfico de pizza (despesas por categoria) */
+export const pieChartColors: Record<string, string> = {
+  'Alimentação': '#F59E0B',
+  'Moradia': '#8B5CF6',
+  'Transporte': '#3B82F6',
+  'Saúde': '#EF4444',
+  'Educação': '#10B981',
+  'Lazer': '#F97316',
+  'Assinaturas': '#6366F1',
+  'Roupas': '#EC4899',
+  'Outros': '#6B7280',
+  'Dívida': '#DC2626',
+};
+
 const today = new Date();
 const currentMonth = today.getMonth();
 const currentYear = today.getFullYear();
