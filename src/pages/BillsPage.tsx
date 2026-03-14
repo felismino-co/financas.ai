@@ -157,7 +157,7 @@ export default function BillsPage() {
       due_day: b.due_day,
       type: b.type,
       category: b.category ?? PAYING_CATEGORIES[0],
-      is_variable: b.bill_type === 'variable' || b.is_variable ?? false,
+      is_variable: b.bill_type === 'variable' || (b.is_variable ?? false),
       bill_type: (b.bill_type as BillType) ?? 'fixed',
       installment_total: b.installment_total ?? b.installments ?? 1,
       installment_current: b.installment_current ?? b.paid_installments ?? 0,
